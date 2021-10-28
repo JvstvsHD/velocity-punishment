@@ -45,7 +45,7 @@ public class StandardPunishmentManager implements PunishmentManager {
 
     @Override
     public Mute createMute(UUID player, Component reason, PunishmentDuration duration) {
-        return null;
+        throw new UnsupportedOperationException();
     }
 
     @Override
