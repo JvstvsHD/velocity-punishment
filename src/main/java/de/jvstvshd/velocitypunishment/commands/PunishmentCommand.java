@@ -3,6 +3,7 @@ package de.jvstvshd.velocitypunishment.commands;
 import com.google.common.collect.ImmutableList;
 import com.velocitypowered.api.command.CommandSource;
 import com.velocitypowered.api.command.SimpleCommand;
+import com.velocitypowered.api.proxy.ProxyServer;
 import de.jvstvshd.velocitypunishment.punishment.Punishment;
 import de.jvstvshd.velocitypunishment.punishment.PunishmentHelper;
 import de.jvstvshd.velocitypunishment.punishment.PunishmentManager;
@@ -13,21 +14,27 @@ import net.kyori.adventure.text.event.HoverEvent;
 import net.kyori.adventure.text.event.HoverEventSource;
 import net.kyori.adventure.text.format.NamedTextColor;
 
+import javax.sql.DataSource;
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
 import java.util.*;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
+import java.util.concurrent.*;
 import java.util.stream.Collectors;
 
 public class PunishmentCommand implements SimpleCommand {
 
     private final ExecutorService service;
     private final PunishmentManager punishmentManager;
+    private final DataSource dataSource;
+    private final ProxyServer server;
 
-    public PunishmentCommand(ExecutorService service, PunishmentManager punishmentManager) {
+    public PunishmentCommand(ExecutorService service, PunishmentManager punishmentManager, DataSource dataSource, ProxyServer server) {
         this.service = service;
         this.punishmentManager = punishmentManager;
+        this.dataSource = dataSource;
+        this.server = server;
     }
 
     private final static List<String> options = ImmutableList.of("annul", "remove", "info", "change");
@@ -47,24 +54,23 @@ public class PunishmentCommand implements SimpleCommand {
                 invocation.source().sendMessage(Component.text("This player is not banned at the moment.").color(NamedTextColor.RED));
                 return;
             }
-            service.execute(() -> {
-                List<Punishment> punishments;
-                try {
-                    punishments = punishmentManager.getPunishments(playerUuid, service).get(10, TimeUnit.SECONDS);
-                } catch (InterruptedException | TimeoutException | ExecutionException e) {
-                    e.printStackTrace();
-                    source.sendMessage(Util.INTERNAL_ERROR);
-                    return;
-                }
-                source.sendMessage(Component.text("The player has " + punishments.size() + " punishments.").color(NamedTextColor.AQUA));
-                for (Punishment punishment : punishments) {
-                    Component component = helper.buildPunishmentData(punishment)
-                            .clickEvent(ClickEvent.copyToClipboard(punishment.getPunishmentUuid().toString().toLowerCase(Locale.ROOT)))
-                            .hoverEvent((HoverEventSource<Component>) op -> HoverEvent.showText(Component.text("Click to copy punishment id")
-                                    .color(NamedTextColor.GREEN)));
-                    source.sendMessage(component);
-                }
-            });
+
+            List<Punishment> punishments;
+            try {
+                punishments = punishmentManager.getPunishments(playerUuid, service).get(10, TimeUnit.SECONDS);
+            } catch (InterruptedException | TimeoutException | ExecutionException e) {
+                e.printStackTrace();
+                source.sendMessage(Util.INTERNAL_ERROR);
+                return;
+            }
+            source.sendMessage(Component.text("The player has " + punishments.size() + " punishments.").color(NamedTextColor.AQUA));
+            for (Punishment punishment : punishments) {
+                Component component = helper.buildPunishmentData(punishment)
+                        .clickEvent(ClickEvent.copyToClipboard(punishment.getPunishmentUuid().toString().toLowerCase(Locale.ROOT)))
+                        .hoverEvent((HoverEventSource<Component>) op -> HoverEvent.showText(Component.text("Click to copy punishment id")
+                                .color(NamedTextColor.GREEN)));
+                source.sendMessage(component);
+            }
             return;
         }
         UUID uuid;
@@ -83,49 +89,69 @@ public class PunishmentCommand implements SimpleCommand {
                             Component.text(option).color(NamedTextColor.YELLOW)));
             return;
         }
-        service.execute(() -> {
-            Punishment punishment;
-            try {
-                Optional<? extends Punishment> optionalPunishment = punishmentManager.getPunishment(uuid, service).get(5, TimeUnit.SECONDS);
-                if (optionalPunishment.isEmpty()) {
-                    source.sendMessage(Component.text().append(Component.text("Could not find a punishment for id '").color(NamedTextColor.RED),
-                            Component.text(uuid.toString().toLowerCase(Locale.ROOT)).color(NamedTextColor.YELLOW),
-                            Component.text("'.").color(NamedTextColor.RED)));
-                    return;
-                }
-                punishment = optionalPunishment.get();
-            } catch (InterruptedException | TimeoutException | ExecutionException e) {
-                e.printStackTrace();
-                source.sendMessage(Util.INTERNAL_ERROR);
+
+        Punishment punishment;
+        try {
+            Optional<? extends Punishment> optionalPunishment = punishmentManager.getPunishment(uuid, service).get(5, TimeUnit.SECONDS);
+            if (optionalPunishment.isEmpty()) {
+                source.sendMessage(Component.text().append(Component.text("Could not find a punishment for id '").color(NamedTextColor.RED),
+                        Component.text(uuid.toString().toLowerCase(Locale.ROOT)).color(NamedTextColor.YELLOW),
+                        Component.text("'.").color(NamedTextColor.RED)));
                 return;
             }
-            switch (option) {
-                case "annul":
-                case "remove":
-                    try {
-                        if (punishment.annul().get(5, TimeUnit.SECONDS)) {
-                            source.sendMessage(Component.text("The punishment was successfully annulled.").color(NamedTextColor.GREEN));
-                        } else {
-                            source.sendMessage(Component.text().append(Component.text("Could not annul punishment for id '").color(NamedTextColor.RED),
-                                    Component.text(uuid.toString().toLowerCase()).color(NamedTextColor.YELLOW),
-                                    Component.text("'.").color(NamedTextColor.RED)));
-                            return;
-                        }
-                    } catch (InterruptedException | TimeoutException | ExecutionException e) {
-                        e.printStackTrace();
-                        source.sendMessage(Util.INTERNAL_ERROR);
+            punishment = optionalPunishment.get();
+        } catch (InterruptedException | TimeoutException | ExecutionException e) {
+            e.printStackTrace();
+            source.sendMessage(Util.INTERNAL_ERROR);
+            return;
+        }
+        switch (option) {
+            case "annul":
+            case "remove":
+                try {
+                    if (punishment.annul().get(5, TimeUnit.SECONDS)) {
+                        source.sendMessage(Component.text("The punishment was successfully annulled.").color(NamedTextColor.GREEN));
+                    } else {
+                        source.sendMessage(Component.text().append(Component.text("Could not annul punishment for id '").color(NamedTextColor.RED),
+                                Component.text(uuid.toString().toLowerCase()).color(NamedTextColor.YELLOW),
+                                Component.text("'.").color(NamedTextColor.RED)));
                         return;
                     }
-                    break;
-                case "info":
-                    source.sendMessage(new PunishmentHelper().buildPunishmentData(punishment));
-                    break;
-                case "change":
-                    source.sendMessage(Component.text("Soon™️"));
-                    break;
-            }
-        });
+                } catch (InterruptedException | TimeoutException | ExecutionException e) {
+                    e.printStackTrace();
+                    source.sendMessage(Util.INTERNAL_ERROR);
+                    return;
+                }
+                break;
+            case "info":
+                source.sendMessage(new PunishmentHelper().buildPunishmentData(punishment));
+                break;
+            case "change":
+                source.sendMessage(Component.text("Soon™️"));
+                break;
+        }
+    }
 
+    @Override
+    public CompletableFuture<List<String>> suggestAsync(Invocation invocation) {
+        if (invocation.arguments().length == 2 && invocation.arguments()[0].equalsIgnoreCase("playerinfo")) {
+            return Util.executeAsync(() -> {
+                List<String> list = new ArrayList<>();
+                try (Connection connection = dataSource.getConnection();
+                     PreparedStatement statement = connection.prepareStatement("SELECT name FROM velocity_punishment WHERE name LIKE ?")) {
+                    statement.setString(1, invocation.arguments()[0].toLowerCase() + "%");
+                    ResultSet rs = statement.executeQuery();
+                    while (rs.next()) {
+                        list.add(rs.getString(1));
+                    }
+                } catch (SQLException e) {
+                    e.printStackTrace();
+                }
+                list.addAll(Util.getPlayerNames(server.getAllPlayers()));
+                return ImmutableList.copyOf(list);
+            }, service);
+        }
+        return CompletableFuture.completedFuture(suggest(invocation));
     }
 
     @Override

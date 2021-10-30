@@ -1,6 +1,6 @@
 package de.jvstvshd.velocitypunishment.punishment;
 
-public interface Mute extends Punishment {
+public interface Mute extends TemporalPunishment {
 
 
 }

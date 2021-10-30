@@ -32,13 +32,13 @@ public class PunishmentHelper {
                         punishment.getReason(),
                         Component.newline(),
                         punishment instanceof TemporalPunishment temporalPunishment ?
-                                buildPunishmentData(temporalPunishment) : Component.text(""),
+                                buildPunishmentDataTemporal(temporalPunishment) : Component.text(""),
                         Component.newline()
                 )
                 .build();
     }
 
-    public Component buildPunishmentData(TemporalPunishment punishment) {
+    public Component buildPunishmentDataTemporal(TemporalPunishment punishment) {
         return punishment.isPermanent() ? Component.text("permanent").color(NamedTextColor.RED) : Component.text()
                 .append(Component.text("duration: ").color(NamedTextColor.AQUA),
                         Component.text(punishment.getDuration().getRemainingDuration()).color(NamedTextColor.YELLOW),

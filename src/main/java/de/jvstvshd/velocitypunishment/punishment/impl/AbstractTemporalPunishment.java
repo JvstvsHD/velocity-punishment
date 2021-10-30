@@ -37,4 +37,16 @@ public abstract class AbstractTemporalPunishment extends AbstractPunishment impl
                 "duration=" + duration +
                 "} " + super.toString();
     }
+
+    @Override
+    public boolean isValid() {
+        return super.isValid() && isOngoing();
+    }
+
+    @Override
+    protected void checkValidity() {
+        if (!isValid()) {
+            throw new IllegalStateException("punishment is invalid (probably isOngoing returned false)");
+        }
+    }
 }

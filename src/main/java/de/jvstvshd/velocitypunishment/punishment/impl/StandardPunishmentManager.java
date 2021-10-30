@@ -45,9 +45,10 @@ public class StandardPunishmentManager implements PunishmentManager {
 
     @Override
     public Mute createMute(UUID player, Component reason, PunishmentDuration duration) {
-        throw new UnsupportedOperationException();
+        return new StandardMute(player, reason, dataSource, service, this, duration);
     }
 
+    @SuppressWarnings("unchecked")
     @Override
     public CompletableFuture<List<Punishment>> getPunishments(UUID player, ExecutorService service, PunishmentType... types) {
         return executeAsync(() -> {
@@ -76,7 +77,7 @@ public class StandardPunishmentManager implements PunishmentManager {
                 Punishment punishment;
                 switch (type) {
                     case BAN, PERMANENT_BAN -> punishment = new StandardBan(uuid, reason, dataSource, service, this, duration, punishmentUuid);
-                    case MUTE, PERMANENT_MUTE -> throw new UnsupportedOperationException("Mutes are not implemented yet.");
+                    case MUTE, PERMANENT_MUTE -> punishment = new StandardMute(uuid, reason, dataSource, service, this, duration, punishmentUuid);
                     case KICK -> throw new UnsupportedOperationException("Kicks are not implemented yet.");
                     default -> throw new UnsupportedOperationException("unhandled punishment type: " + type.getName());
                 }
@@ -113,6 +114,7 @@ public class StandardPunishmentManager implements PunishmentManager {
         return getPunishment(resultSet, StandardPunishmentType.valueOf(resultSet.getString(typeIndex).toUpperCase(Locale.ROOT)),
                 uuidIndex, timestampIndex, reasonIndex, punishmentIdIndex);
     }
+
     private Punishment getPunishment(ResultSet resultSet, UUID punishmentId, int uuidIndex, int timestampIndex, int reasonIndex,
                                      int typeIndex) throws SQLException {
         return getPunishment(resultSet, StandardPunishmentType.valueOf(resultSet.getString(typeIndex).toUpperCase(Locale.ROOT)),

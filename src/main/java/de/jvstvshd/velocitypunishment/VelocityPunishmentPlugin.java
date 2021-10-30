@@ -13,11 +13,9 @@ import com.velocitypowered.api.plugin.annotation.DataDirectory;
 import com.velocitypowered.api.proxy.ProxyServer;
 import com.zaxxer.hikari.HikariConfig;
 import com.zaxxer.hikari.HikariDataSource;
-import de.jvstvshd.velocitypunishment.commands.BanCommand;
-import de.jvstvshd.velocitypunishment.commands.PunishmentCommand;
-import de.jvstvshd.velocitypunishment.commands.TempbanCommand;
-import de.jvstvshd.velocitypunishment.commands.UnbanCommand;
+import de.jvstvshd.velocitypunishment.commands.*;
 import de.jvstvshd.velocitypunishment.config.ConfigurationManager;
+import de.jvstvshd.velocitypunishment.listener.ChatListener;
 import de.jvstvshd.velocitypunishment.listener.ConnectListener;
 import de.jvstvshd.velocitypunishment.punishment.PunishmentManager;
 import de.jvstvshd.velocitypunishment.punishment.impl.StandardPunishmentManager;
@@ -68,21 +66,21 @@ public class VelocityPunishmentPlugin {
         } catch (SQLException e) {
             logger.error("Could not create table velocity_punishment in database " + dataSource.getDataSourceProperties().get("dataSource.databaseName"), e);
         }
-        setup(server.getCommandManager());
-        setupListeners(server.getEventManager());
-        new MuteListener().inject(null);
+        setup(server.getCommandManager(), server.getEventManager());
     }
 
-    private void setup(CommandManager commandManager) {
-        ExecutorService commandService = Executors.newCachedThreadPool();
-        commandManager.register(commandManager.metaBuilder("ban").build(), new BanCommand(server, punishmentManager, commandService));
-        commandManager.register(commandManager.metaBuilder("tempban").build(), new TempbanCommand(punishmentManager, server, commandService));
-        commandManager.register(commandManager.metaBuilder("unban").build(), new UnbanCommand(punishmentManager, dataSource, commandService));
-        commandManager.register(commandManager.metaBuilder("punishment").build(), new PunishmentCommand(commandService, punishmentManager));
-    }
+    private void setup(CommandManager commandManager, EventManager eventManager) {
+        ExecutorService service = Executors.newCachedThreadPool();
+        ChatListener chatListener = new ChatListener(punishmentManager, service);
 
-    private void setupListeners(EventManager eventManager) {
         eventManager.register(this, new ConnectListener(punishmentManager, Executors.newCachedThreadPool(), server));
+        eventManager.register(this, chatListener);
+
+        commandManager.register(commandManager.metaBuilder("ban").build(), new BanCommand(server, punishmentManager));
+        commandManager.register(commandManager.metaBuilder("tempban").build(), new TempbanCommand(punishmentManager, server));
+        commandManager.register(commandManager.metaBuilder("unban").build(), new UnbanCommand(punishmentManager, dataSource, service));
+        commandManager.register(commandManager.metaBuilder("punishment").build(), new PunishmentCommand(service, punishmentManager, dataSource, server));
+        commandManager.register(commandManager.metaBuilder("mute").build(), new MuteCommand(punishmentManager, server, chatListener));
     }
 
     public ProxyServer getServer() {

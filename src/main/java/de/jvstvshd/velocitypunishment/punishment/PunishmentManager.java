@@ -71,7 +71,9 @@ public interface PunishmentManager {
      * @param player the player whose punishments should be queried
      * @return the list of punishments which are running at the moment.
      */
-    CompletableFuture<List<Punishment>> getPunishments(UUID player, ExecutorService service, PunishmentType... type);
+    <T extends Punishment> CompletableFuture<List<T>>  getPunishments(UUID player, ExecutorService service, PunishmentType... type);
+
+    <T extends Punishment> CompletableFuture<Optional<T>> getPunishment(UUID punishmentId, ExecutorService service);
 
     /**
      * @return the underlying {@link ProxyServer} of this punishment manager.
@@ -103,5 +105,4 @@ public interface PunishmentManager {
 
     CompletableFuture<Boolean> isBanned(UUID playerUuid, ExecutorService service);
 
-    CompletableFuture<Optional<? extends Punishment>> getPunishment(UUID punishmentId, ExecutorService service);
 }

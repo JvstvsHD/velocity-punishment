@@ -12,7 +12,9 @@ repositories {
 }
 
 dependencies {
-    implementation("com.velocitypowered", "velocity-api", "3.0.1")
+    compileOnly("com.velocitypowered", "velocity-api", "3.0.1")
+    compileOnly("com.velocitypowered", "velocity-proxy", "3.0.1")
+    compileOnly("io.netty:netty-handler:4.1.69.Final")
     annotationProcessor("com.velocitypowered", "velocity-api", "3.0.1")
     compileOnly("net.luckperms:api:5.3")
 

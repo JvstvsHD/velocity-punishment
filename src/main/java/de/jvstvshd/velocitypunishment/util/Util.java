@@ -2,6 +2,8 @@ package de.jvstvshd.velocitypunishment.util;
 
 import com.google.common.collect.Sets;
 import com.velocitypowered.api.proxy.Player;
+import de.jvstvshd.velocitypunishment.punishment.Punishment;
+import de.jvstvshd.velocitypunishment.punishment.TemporalPunishment;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.TextComponent;
 import net.kyori.adventure.text.event.ClickEvent;
@@ -18,6 +20,7 @@ import java.util.function.BinaryOperator;
 import java.util.function.Function;
 import java.util.function.Supplier;
 import java.util.stream.Collector;
+import java.util.stream.Collectors;
 
 public class Util {
 
@@ -88,6 +91,23 @@ public class Util {
             }
         });
         return cf;
+    }
+
+    public static <T extends TemporalPunishment> T getLongestPunishment(List<T> list) {
+        List<T> sorted = sortPunishments(list);
+        return sorted.get(sorted.size() - 1);
+    }
+
+    public static <T extends TemporalPunishment> List<T> sortPunishments(List<T> list) {
+        return list.stream().sorted(Comparator.comparing(TemporalPunishment::getDuration)).collect(Collectors.toList());
+    }
+
+    public static <T extends Punishment> List<T> convert(List<? super T> list) {
+        List<T> out = new ArrayList<>();
+        for (Object o : list) {
+            out.add((T) o);
+        }
+        return out;
     }
 
     public static String trimUuid(UUID origin) {

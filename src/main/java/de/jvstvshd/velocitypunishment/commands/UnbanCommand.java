@@ -43,39 +43,37 @@ public class UnbanCommand implements SimpleCommand {
             invocation.source().sendMessage(Component.text("Invalid usage!").color(NamedTextColor.DARK_RED));
             return;
         }
-        service.execute(() -> {
-            PunishmentHelper helper = new PunishmentHelper();
-            UUID playerUuid = helper.getPlayerUuid(0, service, manager, invocation);
-            if (playerUuid == null) {
-                invocation.source().sendMessage(Component.text("This player is not banned at the moment.").color(NamedTextColor.RED));
-                return;
+        PunishmentHelper helper = new PunishmentHelper();
+        UUID playerUuid = helper.getPlayerUuid(0, service, manager, invocation);
+        if (playerUuid == null) {
+            invocation.source().sendMessage(Component.text("This player is not banned at the moment.").color(NamedTextColor.RED));
+            return;
+        }
+        List<Punishment> punishments;
+        try {
+            punishments = manager.getPunishments(playerUuid, service, StandardPunishmentType.BAN, StandardPunishmentType.PERMANENT_BAN).get(5, TimeUnit.SECONDS);
+        } catch (InterruptedException | ExecutionException | TimeoutException e) {
+            e.printStackTrace();
+            invocation.source().sendMessage(Util.INTERNAL_ERROR);
+            return;
+        }
+        if (punishments.isEmpty()) {
+            invocation.source().sendMessage(Component.text("This player is not banned at the moment.").color(NamedTextColor.RED));
+            return;
+        }
+        if (punishments.size() > 1) {
+            invocation.source().sendMessage(Component.text("This player has multiple punishments with type (permanent) ban.").color(NamedTextColor.YELLOW));
+            for (Punishment punishment : punishments) {
+                invocation.source().sendMessage(buildComponent(helper.buildPunishmentData(punishment), punishment));
             }
-            List<Punishment> punishments;
-            try {
-                punishments = manager.getPunishments(playerUuid, service, StandardPunishmentType.BAN, StandardPunishmentType.PERMANENT_BAN).get(5, TimeUnit.SECONDS);
-            } catch (InterruptedException | ExecutionException | TimeoutException e) {
-                e.printStackTrace();
-                invocation.source().sendMessage(Util.INTERNAL_ERROR);
-                return;
-            }
-            if (punishments.isEmpty()) {
-                invocation.source().sendMessage(Component.text("This player is not banned at the moment.").color(NamedTextColor.RED));
-                return;
-            }
-            if (punishments.size() > 1) {
-                invocation.source().sendMessage(Component.text("This player has multiple punishments with type (permanent) ban.").color(NamedTextColor.YELLOW));
-                for (Punishment punishment : punishments) {
-                    invocation.source().sendMessage(buildComponent(helper.buildPunishmentData(punishment), punishment));
-                }
+        } else {
+            Punishment punishment = punishments.get(0);
+            if (helper.annul(invocation, punishment)) {
+                invocation.source().sendMessage(Component.text("The player was annulled.").color(NamedTextColor.GREEN));
             } else {
-                Punishment punishment = punishments.get(0);
-                if (helper.annul(invocation, punishment)) {
-                    invocation.source().sendMessage(Component.text("The player was annulled.").color(NamedTextColor.GREEN));
-                } else {
-                    invocation.source().sendMessage(Component.text("The player could not be annulled.").color(NamedTextColor.RED));
-                }
+                invocation.source().sendMessage(Component.text("The player could not be annulled.").color(NamedTextColor.RED));
             }
-        });
+        }
     }
 
     @Override
@@ -85,7 +83,7 @@ public class UnbanCommand implements SimpleCommand {
                 return Util.executeAsync(() -> {
                     List<String> list = new ArrayList<>();
                     try (Connection connection = dataSource.getConnection();
-                        PreparedStatement statement = connection.prepareStatement("SELECT name FROM velocity_punishment WHERE name LIKE ?")) {
+                         PreparedStatement statement = connection.prepareStatement("SELECT name FROM velocity_punishment WHERE name LIKE ?")) {
                         statement.setString(1, invocation.arguments()[0].toLowerCase() + "%");
                         ResultSet rs = statement.executeQuery();
                         while (rs.next()) {
@@ -109,7 +107,7 @@ public class UnbanCommand implements SimpleCommand {
 
     private Component buildComponent(Component dataComponent, Punishment punishment) {
         return dataComponent.clickEvent(ClickEvent.runCommand("/punishment " + punishment.getPunishmentUuid()
-                .toString().toLowerCase(Locale.ROOT) + " remove"))
+                        .toString().toLowerCase(Locale.ROOT) + " remove"))
                 .hoverEvent((HoverEventSource<Component>) op -> HoverEvent.showText(Component
                         .text("Click to remove punishment").color(NamedTextColor.GREEN)));
     }

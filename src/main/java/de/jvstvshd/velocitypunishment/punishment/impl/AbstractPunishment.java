@@ -25,6 +25,7 @@ public abstract class AbstractPunishment implements Punishment {
     protected final static String APPLY_ANNUL = "DELETE FROM velocity_punishment WHERE punishment_id = ?";
     @SuppressWarnings("GrazieInspection")
     protected final static String APPLY_CHANGE = "UPDATE velocity_punishment SET reason = ?, expiration = ?, permanent = ? WHERE punishment_id = ?";
+    private boolean validity;
 
     public AbstractPunishment(UUID playerUuid, Component reason, DataSource dataSource, ExecutorService service, PunishmentManager punishmentManager) {
         this(playerUuid, reason, dataSource, service, punishmentManager, UUID.randomUUID());
@@ -37,6 +38,7 @@ public abstract class AbstractPunishment implements Punishment {
         this.playerUuid = playerUuid;
         this.punishmentManager = punishmentManager;
         this.punishmentUuid = punishmentUuid;
+        this.validity = true;
     }
 
     public DataSource getDataSource() {
@@ -81,6 +83,10 @@ public abstract class AbstractPunishment implements Punishment {
         return reason;
     }
 
+    public boolean isValid() {
+        return validity;
+    }
+
     @Override
     public String toString() {
         return "AbstractPunishment{" +
@@ -91,5 +97,15 @@ public abstract class AbstractPunishment implements Punishment {
                 ", punishmentUuid=" + punishmentUuid +
                 ", punishmentManager=" + punishmentManager +
                 '}';
+    }
+
+    protected void setValidity(boolean validity) {
+        this.validity = validity;
+    }
+
+    protected void checkValidity() {
+        if (!isValid()) {
+            throw new IllegalStateException("punishment is invalid");
+        }
     }
 }
