@@ -73,14 +73,16 @@ public class VelocityPunishmentPlugin {
         ExecutorService service = Executors.newCachedThreadPool();
         ChatListener chatListener = new ChatListener(punishmentManager, service);
 
-        eventManager.register(this, new ConnectListener(punishmentManager, Executors.newCachedThreadPool(), server));
+        eventManager.register(this, new ConnectListener(punishmentManager, Executors.newCachedThreadPool(), server, chatListener));
         eventManager.register(this, chatListener);
 
         commandManager.register(commandManager.metaBuilder("ban").build(), new BanCommand(server, punishmentManager));
         commandManager.register(commandManager.metaBuilder("tempban").build(), new TempbanCommand(punishmentManager, server));
         commandManager.register(commandManager.metaBuilder("unban").build(), new UnbanCommand(punishmentManager, dataSource, service));
-        commandManager.register(commandManager.metaBuilder("punishment").build(), new PunishmentCommand(service, punishmentManager, dataSource, server));
+        commandManager.register(commandManager.metaBuilder("punishment").build(), new PunishmentCommand(service, punishmentManager, dataSource, server, chatListener));
         commandManager.register(commandManager.metaBuilder("mute").build(), new MuteCommand(punishmentManager, server, chatListener));
+        commandManager.register(commandManager.metaBuilder("tempmute").build(), new TempmuteCommand(punishmentManager, server));
+        commandManager.register(commandManager.metaBuilder("unmute").build(), new UnmuteCommand(punishmentManager, dataSource, service, chatListener));
     }
 
     public ProxyServer getServer() {

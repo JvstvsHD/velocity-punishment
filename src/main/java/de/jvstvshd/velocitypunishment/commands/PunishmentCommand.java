@@ -4,6 +4,7 @@ import com.google.common.collect.ImmutableList;
 import com.velocitypowered.api.command.CommandSource;
 import com.velocitypowered.api.command.SimpleCommand;
 import com.velocitypowered.api.proxy.ProxyServer;
+import de.jvstvshd.velocitypunishment.listener.ChatListener;
 import de.jvstvshd.velocitypunishment.punishment.Punishment;
 import de.jvstvshd.velocitypunishment.punishment.PunishmentHelper;
 import de.jvstvshd.velocitypunishment.punishment.PunishmentManager;
@@ -29,12 +30,14 @@ public class PunishmentCommand implements SimpleCommand {
     private final PunishmentManager punishmentManager;
     private final DataSource dataSource;
     private final ProxyServer server;
+    private final ChatListener chatListener;
 
-    public PunishmentCommand(ExecutorService service, PunishmentManager punishmentManager, DataSource dataSource, ProxyServer server) {
+    public PunishmentCommand(ExecutorService service, PunishmentManager punishmentManager, DataSource dataSource, ProxyServer server, ChatListener chatListener) {
         this.service = service;
         this.punishmentManager = punishmentManager;
         this.dataSource = dataSource;
         this.server = server;
+        this.chatListener = chatListener;
     }
 
     private final static List<String> options = ImmutableList.of("annul", "remove", "info", "change");
@@ -65,8 +68,9 @@ public class PunishmentCommand implements SimpleCommand {
             }
             source.sendMessage(Component.text("The player has " + punishments.size() + " punishments.").color(NamedTextColor.AQUA));
             for (Punishment punishment : punishments) {
+
                 Component component = helper.buildPunishmentData(punishment)
-                        .clickEvent(ClickEvent.copyToClipboard(punishment.getPunishmentUuid().toString().toLowerCase(Locale.ROOT)))
+                        .clickEvent(ClickEvent.suggestCommand(punishment.getPunishmentUuid().toString().toLowerCase(Locale.ROOT)))
                         .hoverEvent((HoverEventSource<Component>) op -> HoverEvent.showText(Component.text("Click to copy punishment id")
                                 .color(NamedTextColor.GREEN)));
                 source.sendMessage(component);
@@ -111,13 +115,14 @@ public class PunishmentCommand implements SimpleCommand {
                 try {
                     if (punishment.annul().get(5, TimeUnit.SECONDS)) {
                         source.sendMessage(Component.text("The punishment was successfully annulled.").color(NamedTextColor.GREEN));
+                        chatListener.update(uuid);
                     } else {
                         source.sendMessage(Component.text().append(Component.text("Could not annul punishment for id '").color(NamedTextColor.RED),
                                 Component.text(uuid.toString().toLowerCase()).color(NamedTextColor.YELLOW),
                                 Component.text("'.").color(NamedTextColor.RED)));
                         return;
                     }
-                } catch (InterruptedException | TimeoutException | ExecutionException e) {
+                } catch (Exception e) {
                     e.printStackTrace();
                     source.sendMessage(Util.INTERNAL_ERROR);
                     return;
@@ -136,10 +141,11 @@ public class PunishmentCommand implements SimpleCommand {
     public CompletableFuture<List<String>> suggestAsync(Invocation invocation) {
         if (invocation.arguments().length == 2 && invocation.arguments()[0].equalsIgnoreCase("playerinfo")) {
             return Util.executeAsync(() -> {
-                List<String> list = new ArrayList<>();
+                Set<String> list = new HashSet<>();
                 try (Connection connection = dataSource.getConnection();
                      PreparedStatement statement = connection.prepareStatement("SELECT name FROM velocity_punishment WHERE name LIKE ?")) {
-                    statement.setString(1, invocation.arguments()[0].toLowerCase() + "%");
+                    String suggestion = invocation.arguments().length == 1 ? "" : invocation.arguments()[1].toLowerCase();
+                    statement.setString(1, suggestion + "%");
                     ResultSet rs = statement.executeQuery();
                     while (rs.next()) {
                         list.add(rs.getString(1));
@@ -147,7 +153,7 @@ public class PunishmentCommand implements SimpleCommand {
                 } catch (SQLException e) {
                     e.printStackTrace();
                 }
-                list.addAll(Util.getPlayerNames(server.getAllPlayers()));
+                list.addAll(Util.getPlayerNames(server.getAllPlayers()).stream().map(String::toLowerCase).collect(Collectors.toList()));
                 return ImmutableList.copyOf(list);
             }, service);
         }

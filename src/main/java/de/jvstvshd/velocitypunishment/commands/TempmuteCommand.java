@@ -4,8 +4,8 @@ import com.google.common.collect.ImmutableList;
 import com.velocitypowered.api.command.CommandSource;
 import com.velocitypowered.api.command.SimpleCommand;
 import com.velocitypowered.api.proxy.ProxyServer;
-import de.jvstvshd.velocitypunishment.listener.ChatListener;
 import de.jvstvshd.velocitypunishment.punishment.Mute;
+import de.jvstvshd.velocitypunishment.punishment.PunishmentDuration;
 import de.jvstvshd.velocitypunishment.punishment.PunishmentHelper;
 import de.jvstvshd.velocitypunishment.punishment.PunishmentManager;
 import de.jvstvshd.velocitypunishment.util.Util;
@@ -14,35 +14,37 @@ import net.kyori.adventure.text.TextComponent;
 import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.format.TextDecoration;
 
+import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.ExecutionException;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
 import java.util.stream.Collectors;
 
 import static de.jvstvshd.velocitypunishment.util.Util.copyComponent;
 
-public class MuteCommand implements SimpleCommand {
+public class TempmuteCommand implements SimpleCommand {
 
     private final PunishmentManager punishmentManager;
-    private final ProxyServer server;
-    private final ChatListener chatListener;
+    private final ProxyServer proxyServer;
 
-    public MuteCommand(PunishmentManager punishmentManager, ProxyServer server, ChatListener chatListener) {
+    public TempmuteCommand(PunishmentManager punishmentManager, ProxyServer proxyServer) {
         this.punishmentManager = punishmentManager;
-        this.server = server;
-        this.chatListener = chatListener;
+        this.proxyServer = proxyServer;
     }
 
     @Override
     public void execute(Invocation invocation) {
         CommandSource source = invocation.source();
-        if (invocation.arguments().length < 1) {
+        if (!hasPermission(invocation)) {
+            source.sendMessage(Component.text("no_permission").color(NamedTextColor.RED));
+            return;
+        }
+        if (invocation.arguments().length < 2) {
             source.sendMessage(Component.text("invalid_usage").color(NamedTextColor.DARK_RED));
             return;
         }
+
         PunishmentHelper parser = new PunishmentHelper();
         Optional<UUID> optionalUUID = parser.parseUuid(punishmentManager, invocation);
         UUID uuid;
@@ -51,42 +53,43 @@ public class MuteCommand implements SimpleCommand {
             return;
         }
         uuid = optionalUUID.get();
-        TextComponent reason = parser.parseComponent(1, invocation);
-
+        Optional<PunishmentDuration> optDuration = parser.parseDuration(1, invocation);
+        if (optDuration.isEmpty()) {
+            return;
+        }
+        PunishmentDuration duration = optDuration.get();
+        TextComponent component = parser.parseComponent(2, invocation);
         Mute mute;
         try {
-            mute = punishmentManager.createPermanentMute(uuid, reason);
-            mute.punish().get(5, TimeUnit.SECONDS);
-        } catch (InterruptedException | ExecutionException | TimeoutException e) {
+            mute = punishmentManager.createMute(uuid, component, duration);
+            mute.punish().get();
+        } catch (InterruptedException | ExecutionException e) {
             invocation.source().sendMessage(Util.INTERNAL_ERROR);
             e.printStackTrace();
             return;
         }
-        String uuidString = uuid.toString().toLowerCase();
-        Component component = Component.text().append(
-                Component.text("You have muted the player ").color(NamedTextColor.RED),
-                copyComponent(invocation.arguments()[0]).color(NamedTextColor.YELLOW).decorate(TextDecoration.BOLD),
-                Component.text("/").color(NamedTextColor.RED),
-                copyComponent(uuidString).color(NamedTextColor.RED).decorate(TextDecoration.BOLD).color(NamedTextColor.YELLOW),
-                Component.text(" for ").color(NamedTextColor.RED),
-                reason,
-                Component.text(".").color(NamedTextColor.RED)
-        ).build();
-        source.sendMessage(component);
+        String until = duration.expiration().format(DateTimeFormatter.ofPattern("dd.MM.yyyy HH:mm:ss"));
+        String uuidString = uuid.toString().toLowerCase();//.replace('-', Character.MIN_VALUE);
+        source.sendMessage(Component.text("You have muted the player ").color(NamedTextColor.RED)
+                .append(Component.text().append(copyComponent(invocation.arguments()[0]).color(NamedTextColor.YELLOW).decorate(TextDecoration.BOLD),
+                        Component.text("/").color(NamedTextColor.WHITE),
+                        copyComponent(uuidString).color(NamedTextColor.YELLOW).decorate(TextDecoration.BOLD),
+                        Component.text(" for ").color(NamedTextColor.RED),
+                        component,
+                        Component.text(" until ").color(NamedTextColor.RED),
+                        Component.text(until).color(NamedTextColor.GREEN),
+                        Component.text(".").color(NamedTextColor.RED))));
         source.sendMessage(Component.text("Punishment id: " + mute.getPunishmentUuid().toString().toLowerCase()).color(NamedTextColor.YELLOW));
-        if (server.getPlayer(uuid).isPresent()) {
-            chatListener.getMutes().put(uuid, new ChatListener.MuteContainer().setMute(mute));
-        }
     }
 
     @Override
     public List<String> suggest(Invocation invocation) {
         String[] args = invocation.arguments();
         if (args.length == 0) {
-            return Util.getPlayerNames(server.getAllPlayers());
+            return Util.getPlayerNames(proxyServer.getAllPlayers());
         }
         if (args.length == 1) {
-            return Util.getPlayerNames(server.getAllPlayers())
+            return Util.getPlayerNames(proxyServer.getAllPlayers())
                     .stream().filter(s -> s.toLowerCase().startsWith(args[0])).collect(Collectors.toList());
         }
         return ImmutableList.of();

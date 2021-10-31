@@ -38,4 +38,9 @@ public class StandardKick extends AbstractPunishment implements Kick {
     public PunishmentType getType() {
         return StandardPunishmentType.KICK;
     }
+
+    @Override
+    public Component createFullReason() {
+        return getReason();
+    }
 }

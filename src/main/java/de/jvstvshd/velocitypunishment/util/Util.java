@@ -77,7 +77,7 @@ public class Util {
     }
 
     public static TextComponent copyComponent(String text) {
-        return Component.text(text).clickEvent(ClickEvent.copyToClipboard(text))
+        return Component.text(text).clickEvent(ClickEvent.suggestCommand(text))
                 .hoverEvent((HoverEventSource<Component>) op -> HoverEvent.showText(Component.text("Copy to clipboard").color(NamedTextColor.GREEN)));
     }
 
@@ -94,6 +94,8 @@ public class Util {
     }
 
     public static <T extends TemporalPunishment> T getLongestPunishment(List<T> list) {
+        if (list.isEmpty())
+            return null;
         List<T> sorted = sortPunishments(list);
         return sorted.get(sorted.size() - 1);
     }

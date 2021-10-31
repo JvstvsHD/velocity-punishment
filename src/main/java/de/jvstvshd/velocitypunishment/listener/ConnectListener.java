@@ -17,7 +17,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
 public record ConnectListener(PunishmentManager punishmentManager,
-                              ExecutorService service, ProxyServer proxyServer) {
+                              ExecutorService service, ProxyServer proxyServer, ChatListener chatListener) {
 
     @Subscribe()
     public void onConnect(LoginEvent event) throws ExecutionException, InterruptedException, TimeoutException {
@@ -31,10 +31,15 @@ public record ConnectListener(PunishmentManager punishmentManager,
             if (punishment instanceof Mute mute)
                 mutes.add(mute);
         }
-
+        Mute longestMute = Util.getLongestPunishment(mutes);
+        if (longestMute != null) {
+            chatListener.getMutes().put(event.getPlayer().getUniqueId(), new ChatListener.MuteContainer().setMute(longestMute));
+        }
         if (bans.isEmpty())
             return;
         final Ban ban = Util.getLongestPunishment(bans);
+        if (ban == null)
+            return;
         if (ban.isOngoing()) {
             Component deny = ban.createFullReason();
             event.setResult(ResultedEvent.ComponentResult.denied(deny));

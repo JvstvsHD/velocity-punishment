@@ -96,16 +96,20 @@ public class StandardPunishmentManager implements PunishmentManager {
         return getPunishment(resultSet, type, punishmentUuid, uuidIndex, timestampIndex, reasonIndex);
     }
 
-    private Punishment getPunishment(ResultSet resultSet, StandardPunishmentType type, UUID punishmentUuid, int uuidIndex,
-                                     int timestampIndex, int reasonIndex) throws SQLException {
+    @SuppressWarnings("unchecked")
+    private <T extends Punishment> T getPunishment(ResultSet resultSet, StandardPunishmentType type, UUID punishmentUuid, int uuidIndex,
+                                                   int timestampIndex, int reasonIndex) throws SQLException {
         final UUID uuid = Util.parse(resultSet.getString(uuidIndex));
-        final Timestamp timestamp = resultSet.getTimestamp(timestampIndex);
-        final PunishmentDuration duration = PunishmentDuration.fromTimestamp(timestamp);
+        PunishmentDuration duration = null;
+        if (timestampIndex != -1) {
+            final Timestamp timestamp = resultSet.getTimestamp(timestampIndex);
+            duration = PunishmentDuration.fromTimestamp(timestamp);
+        }
         final Component reason = LegacyComponentSerializer.legacySection().deserialize(resultSet.getString(reasonIndex));
-        return switch (type) {
+        return (T) switch (type) {
             case BAN, PERMANENT_BAN -> new StandardBan(uuid, reason, dataSource, service, this, duration, punishmentUuid);
-            case MUTE, PERMANENT_MUTE -> throw new UnsupportedOperationException("Mutes are not implemented yet.");
-            case KICK -> throw new UnsupportedOperationException("Kicks are not implemented yet.");
+            case MUTE, PERMANENT_MUTE -> new StandardMute(uuid, reason, dataSource, service, this, duration, punishmentUuid);
+            case KICK -> new StandardKick(uuid, reason, dataSource, service, this, punishmentUuid);
         };
     }
 
@@ -115,8 +119,9 @@ public class StandardPunishmentManager implements PunishmentManager {
                 uuidIndex, timestampIndex, reasonIndex, punishmentIdIndex);
     }
 
-    private Punishment getPunishment(ResultSet resultSet, UUID punishmentId, int uuidIndex, int timestampIndex, int reasonIndex,
-                                     int typeIndex) throws SQLException {
+    @SuppressWarnings("SameParameterValue")
+    private <T extends Punishment> T getPunishment(ResultSet resultSet, UUID punishmentId, int uuidIndex, int timestampIndex, int reasonIndex,
+                                                   int typeIndex) throws SQLException {
         return getPunishment(resultSet, StandardPunishmentType.valueOf(resultSet.getString(typeIndex).toUpperCase(Locale.ROOT)),
                 punishmentId, uuidIndex, timestampIndex, reasonIndex);
     }
@@ -199,7 +204,7 @@ public class StandardPunishmentManager implements PunishmentManager {
     }
 
     @Override
-    public CompletableFuture<Optional<? extends Punishment>> getPunishment(UUID punishmentId, ExecutorService service) {
+    public <T extends Punishment> CompletableFuture<Optional<T>> getPunishment(UUID punishmentId, ExecutorService service) {
         return executeAsync(() -> {
             try (Connection connection = dataSource.getConnection();
                  PreparedStatement statement = connection.prepareStatement(QUERY_PUNISHMENT_WITH_ID)) {

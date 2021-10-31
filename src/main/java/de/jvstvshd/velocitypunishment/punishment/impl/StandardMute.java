@@ -3,12 +3,15 @@ package de.jvstvshd.velocitypunishment.punishment.impl;
 import de.jvstvshd.velocitypunishment.punishment.*;
 import de.jvstvshd.velocitypunishment.util.Util;
 import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.format.NamedTextColor;
+import net.kyori.adventure.text.format.TextDecoration;
 
 import javax.sql.DataSource;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.Timestamp;
 import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
@@ -88,5 +91,29 @@ public class StandardMute extends AbstractTemporalPunishment implements Mute {
 
     private void updateMutedPlayer(UUID uuid) {
         checkValidity();
+    }
+
+    @Override
+    public Component createFullReason() {
+        if (!isValid()) {
+            return Component.text("INVALID").decorate(TextDecoration.BOLD).color(NamedTextColor.DARK_RED);
+        }
+        if (isPermanent()) {
+            return Component.text().append(Component.text("You have been permanently muted at this server.\n\n")
+                                    .color(NamedTextColor.DARK_RED),
+                            Component.text("Reason: \n").color(NamedTextColor.RED),
+                            getReason())
+                    .build();
+        } else {
+            return Component.text().append(Component.text("You are muted for ").color(NamedTextColor.DARK_RED),
+                    Component.text(getDuration().getRemainingDuration()).color(NamedTextColor.YELLOW),
+
+                    Component.text(".\n\n").color(NamedTextColor.DARK_RED),
+                    Component.text("Reason: \n").color(NamedTextColor.RED),
+                    getReason(),
+                    Component.text("\n\nEnd of punishment: ").color(NamedTextColor.RED),
+                    Component.text(getDuration().expiration().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")))
+                            .color(NamedTextColor.YELLOW)).build();
+        }
     }
 }

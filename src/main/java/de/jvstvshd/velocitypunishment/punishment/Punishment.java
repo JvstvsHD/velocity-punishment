@@ -26,7 +26,7 @@ import java.util.concurrent.CompletableFuture;
  *     ban.punish();
  * }</pre>
  */
-public interface Punishment {
+public interface Punishment extends ReasonHolder {
 
     /**
      * Determines whether the expiration of this punishment is after {@link LocalDateTime#now()} or not.
@@ -63,11 +63,6 @@ public interface Punishment {
      * @see StandardPunishmentType
      */
     PunishmentType getType();
-
-    /**
-     * @return the reason of this punishment as as component
-     */
-    Component getReason();
 
     /**
      * @return the id of this punishment.
