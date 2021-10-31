@@ -16,6 +16,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
 import java.util.stream.Collectors;
 
 import static de.jvstvshd.velocitypunishment.util.Util.copyComponent;
@@ -24,43 +25,48 @@ public class BanCommand implements SimpleCommand {
 
     private final ProxyServer proxyServer;
     private final PunishmentManager punishmentManager;
+    private final ExecutorService service;
 
-    public BanCommand(ProxyServer proxyServer, PunishmentManager punishmentManager) {
+    public BanCommand(ProxyServer proxyServer, PunishmentManager punishmentManager, ExecutorService service) {
         this.proxyServer = proxyServer;
         this.punishmentManager = punishmentManager;
+        this.service = service;
     }
 
     @Override
     public void execute(Invocation invocation) {
         CommandSource source = invocation.source();
         if (invocation.arguments().length < 1) {
-            source.sendMessage(Component.text("invalid_usage").color(NamedTextColor.DARK_RED));
+            source.sendMessage(Component.text("Please use /ban <Player> [reason]").color(NamedTextColor.DARK_RED));
             return;
         }
 
-        PunishmentHelper parser = new PunishmentHelper();
-        Optional<UUID> optionalUUID = parser.parseUuid(punishmentManager, invocation);
-        UUID uuid;
-        if (optionalUUID.isEmpty()) {
-            source.sendMessage(Component.text(invocation.arguments()[0] + " could not be found."));
-            return;
-        }
-        uuid = optionalUUID.get();
-        TextComponent component = parser.parseComponent(1, invocation);
-        try {
-            punishmentManager.createPermanentBan(uuid, component).punish().get();
-        } catch (InterruptedException | ExecutionException e) {
-            invocation.source().sendMessage(Util.INTERNAL_ERROR);
-            e.printStackTrace();
-        }
-        String uuidString = uuid.toString().toLowerCase();
-        source.sendMessage(Component.text("You have banned the player ").color(NamedTextColor.RED)
-                .append(Component.text().append(copyComponent(invocation.arguments()[0]).color(NamedTextColor.YELLOW).decorate(TextDecoration.BOLD),
-                        Component.text("/").color(NamedTextColor.WHITE),
-                        copyComponent(uuidString).color(NamedTextColor.RED).decorate(TextDecoration.BOLD),
-                        Component.text(" for ").color(NamedTextColor.RED),
-                        component,
-                        Component.text(".").color(NamedTextColor.RED))));
+        service.execute(() -> {
+            PunishmentHelper parser = new PunishmentHelper();
+            Optional<UUID> optionalUUID = parser.parseUuid(punishmentManager, invocation);
+            UUID uuid;
+            if (optionalUUID.isEmpty()) {
+                source.sendMessage(Component.text(invocation.arguments()[0] + " could not be found."));
+                return;
+            }
+            uuid = optionalUUID.get();
+            TextComponent component = parser.parseComponent(1, invocation);
+            try {
+                punishmentManager.createPermanentBan(uuid, component).punish().get();
+            } catch (InterruptedException | ExecutionException e) {
+                invocation.source().sendMessage(Util.INTERNAL_ERROR);
+                e.printStackTrace();
+            }
+            String uuidString = uuid.toString().toLowerCase();
+            source.sendMessage(Component.text("You have banned the player ").color(NamedTextColor.RED)
+                    .append(Component.text().append(copyComponent(invocation.arguments()[0]).color(NamedTextColor.YELLOW).decorate(TextDecoration.BOLD),
+                            Component.text("/").color(NamedTextColor.WHITE),
+                            copyComponent(uuidString).color(NamedTextColor.RED).decorate(TextDecoration.BOLD),
+                            Component.text(" for ").color(NamedTextColor.RED),
+                            component,
+                            Component.text(".").color(NamedTextColor.RED))));
+        });
+
     }
 
     @Override

@@ -78,7 +78,7 @@ public class StandardPunishmentManager implements PunishmentManager {
                 switch (type) {
                     case BAN, PERMANENT_BAN -> punishment = new StandardBan(uuid, reason, dataSource, service, this, duration, punishmentUuid);
                     case MUTE, PERMANENT_MUTE -> punishment = new StandardMute(uuid, reason, dataSource, service, this, duration, punishmentUuid);
-                    case KICK -> throw new UnsupportedOperationException("Kicks are not implemented yet.");
+                    case KICK -> punishment = new StandardKick(uuid, reason, dataSource, service, this, punishmentUuid);
                     default -> throw new UnsupportedOperationException("unhandled punishment type: " + type.getName());
                 }
                 punishments.add(punishment);

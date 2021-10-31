@@ -47,34 +47,36 @@ public class PunishmentCommand implements SimpleCommand {
         String[] arguments = invocation.arguments();
         CommandSource source = invocation.source();
         if (arguments.length < 2) {
-            source.sendMessage(Component.text("invalid usage!").color(NamedTextColor.DARK_RED));
+            source.sendMessage(Component.text("Please use /punishment <playerinfo> <player> or <punishment id> <annul|info|change|info|remove>").color(NamedTextColor.DARK_RED));
             return;
         }
         if (arguments[0].equalsIgnoreCase("playerinfo")) {
-            PunishmentHelper helper = new PunishmentHelper();
-            UUID playerUuid = helper.getPlayerUuid(1, service, punishmentManager, invocation);
-            if (playerUuid == null) {
-                invocation.source().sendMessage(Component.text("This player is not banned at the moment.").color(NamedTextColor.RED));
-                return;
-            }
+            service.execute(() -> {
+                PunishmentHelper helper = new PunishmentHelper();
+                UUID playerUuid = helper.getPlayerUuid(1, service, punishmentManager, invocation);
+                if (playerUuid == null) {
+                    invocation.source().sendMessage(Component.text("This player is not banned at the moment.").color(NamedTextColor.RED));
+                    return;
+                }
 
-            List<Punishment> punishments;
-            try {
-                punishments = punishmentManager.getPunishments(playerUuid, service).get(10, TimeUnit.SECONDS);
-            } catch (InterruptedException | TimeoutException | ExecutionException e) {
-                e.printStackTrace();
-                source.sendMessage(Util.INTERNAL_ERROR);
-                return;
-            }
-            source.sendMessage(Component.text("The player has " + punishments.size() + " punishments.").color(NamedTextColor.AQUA));
-            for (Punishment punishment : punishments) {
+                List<Punishment> punishments;
+                try {
+                    punishments = punishmentManager.getPunishments(playerUuid, service).get(10, TimeUnit.SECONDS);
+                } catch (InterruptedException | TimeoutException | ExecutionException e) {
+                    e.printStackTrace();
+                    source.sendMessage(Util.INTERNAL_ERROR);
+                    return;
+                }
+                source.sendMessage(Component.text("The player has " + punishments.size() + " punishments.").color(NamedTextColor.AQUA));
+                for (Punishment punishment : punishments) {
 
-                Component component = helper.buildPunishmentData(punishment)
-                        .clickEvent(ClickEvent.suggestCommand(punishment.getPunishmentUuid().toString().toLowerCase(Locale.ROOT)))
-                        .hoverEvent((HoverEventSource<Component>) op -> HoverEvent.showText(Component.text("Click to copy punishment id")
-                                .color(NamedTextColor.GREEN)));
-                source.sendMessage(component);
-            }
+                    Component component = helper.buildPunishmentData(punishment)
+                            .clickEvent(ClickEvent.suggestCommand(punishment.getPunishmentUuid().toString().toLowerCase(Locale.ROOT)))
+                            .hoverEvent((HoverEventSource<Component>) op -> HoverEvent.showText(Component.text("Click to copy punishment id")
+                                    .color(NamedTextColor.GREEN)));
+                    source.sendMessage(component);
+                }
+            });
             return;
         }
         UUID uuid;
@@ -93,48 +95,50 @@ public class PunishmentCommand implements SimpleCommand {
                             Component.text(option).color(NamedTextColor.YELLOW)));
             return;
         }
-
-        Punishment punishment;
-        try {
-            Optional<? extends Punishment> optionalPunishment = punishmentManager.getPunishment(uuid, service).get(5, TimeUnit.SECONDS);
-            if (optionalPunishment.isEmpty()) {
-                source.sendMessage(Component.text().append(Component.text("Could not find a punishment for id '").color(NamedTextColor.RED),
-                        Component.text(uuid.toString().toLowerCase(Locale.ROOT)).color(NamedTextColor.YELLOW),
-                        Component.text("'.").color(NamedTextColor.RED)));
-                return;
-            }
-            punishment = optionalPunishment.get();
-        } catch (InterruptedException | TimeoutException | ExecutionException e) {
-            e.printStackTrace();
-            source.sendMessage(Util.INTERNAL_ERROR);
-            return;
-        }
-        switch (option) {
-            case "annul":
-            case "remove":
-                try {
-                    if (punishment.annul().get(5, TimeUnit.SECONDS)) {
-                        source.sendMessage(Component.text("The punishment was successfully annulled.").color(NamedTextColor.GREEN));
-                        chatListener.update(uuid);
-                    } else {
-                        source.sendMessage(Component.text().append(Component.text("Could not annul punishment for id '").color(NamedTextColor.RED),
-                                Component.text(uuid.toString().toLowerCase()).color(NamedTextColor.YELLOW),
-                                Component.text("'.").color(NamedTextColor.RED)));
-                        return;
-                    }
-                } catch (Exception e) {
-                    e.printStackTrace();
-                    source.sendMessage(Util.INTERNAL_ERROR);
+        service.execute(() -> {
+            Punishment punishment;
+            try {
+                Optional<? extends Punishment> optionalPunishment = punishmentManager.getPunishment(uuid, service).get(5, TimeUnit.SECONDS);
+                if (optionalPunishment.isEmpty()) {
+                    source.sendMessage(Component.text().append(Component.text("Could not find a punishment for id '").color(NamedTextColor.RED),
+                            Component.text(uuid.toString().toLowerCase(Locale.ROOT)).color(NamedTextColor.YELLOW),
+                            Component.text("'.").color(NamedTextColor.RED)));
                     return;
                 }
-                break;
-            case "info":
-                source.sendMessage(new PunishmentHelper().buildPunishmentData(punishment));
-                break;
-            case "change":
-                source.sendMessage(Component.text("Soon™️"));
-                break;
-        }
+                punishment = optionalPunishment.get();
+            } catch (InterruptedException | TimeoutException | ExecutionException e) {
+                e.printStackTrace();
+                source.sendMessage(Util.INTERNAL_ERROR);
+                return;
+            }
+            switch (option) {
+                case "annul":
+                case "remove":
+                    try {
+                        if (punishment.annul().get(5, TimeUnit.SECONDS)) {
+                            source.sendMessage(Component.text("The punishment was successfully annulled.").color(NamedTextColor.GREEN));
+                            chatListener.update(uuid);
+                        } else {
+                            source.sendMessage(Component.text().append(Component.text("Could not annul punishment for id '").color(NamedTextColor.RED),
+                                    Component.text(uuid.toString().toLowerCase()).color(NamedTextColor.YELLOW),
+                                    Component.text("'.").color(NamedTextColor.RED)));
+                            return;
+                        }
+                    } catch (Exception e) {
+                        e.printStackTrace();
+                        source.sendMessage(Util.INTERNAL_ERROR);
+                        return;
+                    }
+                    break;
+                case "info":
+                    source.sendMessage(new PunishmentHelper().buildPunishmentData(punishment));
+                    break;
+                case "change":
+                    source.sendMessage(Component.text("Soon™️"));
+                    break;
+            }
+        });
+
     }
 
     @Override
@@ -177,6 +181,6 @@ public class PunishmentCommand implements SimpleCommand {
 
     @Override
     public boolean hasPermission(Invocation invocation) {
-        return SimpleCommand.super.hasPermission(invocation);
+        return invocation.source().hasPermission("punishment.command.punishment");
     }
 }

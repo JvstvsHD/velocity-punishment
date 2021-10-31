@@ -43,41 +43,43 @@ public class UnmuteCommand implements SimpleCommand {
     @Override
     public void execute(Invocation invocation) {
         if (invocation.arguments().length < 1) {
-            invocation.source().sendMessage(Component.text("Invalid usage!").color(NamedTextColor.DARK_RED));
+            invocation.source().sendMessage(Component.text("Please use /unmute <player>").color(NamedTextColor.DARK_RED));
             return;
         }
-        PunishmentHelper helper = new PunishmentHelper();
-        UUID playerUuid = helper.getPlayerUuid(0, service, manager, invocation);
-        if (playerUuid == null) {
-            invocation.source().sendMessage(Component.text("This player is not muted at the moment.").color(NamedTextColor.RED));
-            return;
-        }
-        List<Punishment> punishments;
-        try {
-            punishments = manager.getPunishments(playerUuid, service, StandardPunishmentType.MUTE, StandardPunishmentType.PERMANENT_MUTE).get(5, TimeUnit.SECONDS);
-        } catch (InterruptedException | ExecutionException | TimeoutException e) {
-            e.printStackTrace();
-            invocation.source().sendMessage(Util.INTERNAL_ERROR);
-            return;
-        }
-        if (punishments.isEmpty()) {
-            invocation.source().sendMessage(Component.text("This player is not muted at the moment.").color(NamedTextColor.RED));
-            return;
-        }
-        if (punishments.size() > 1) {
-            invocation.source().sendMessage(Component.text("This player has multiple punishments with type (permanent) mute.").color(NamedTextColor.YELLOW));
-            for (Punishment punishment : punishments) {
-                invocation.source().sendMessage(buildComponent(helper.buildPunishmentData(punishment), punishment));
+        service.execute(() -> {
+            PunishmentHelper helper = new PunishmentHelper();
+            UUID playerUuid = helper.getPlayerUuid(0, service, manager, invocation);
+            if (playerUuid == null) {
+                invocation.source().sendMessage(Component.text("This player is not muted at the moment.").color(NamedTextColor.RED));
+                return;
             }
-        } else {
-            Punishment punishment = punishments.get(0);
-            if (helper.annul(invocation, punishment)) {
-                invocation.source().sendMessage(Component.text("The mute was annulled.").color(NamedTextColor.GREEN));
-                chatListener.update(playerUuid);
+            List<Punishment> punishments;
+            try {
+                punishments = manager.getPunishments(playerUuid, service, StandardPunishmentType.MUTE, StandardPunishmentType.PERMANENT_MUTE).get(5, TimeUnit.SECONDS);
+            } catch (InterruptedException | ExecutionException | TimeoutException e) {
+                e.printStackTrace();
+                invocation.source().sendMessage(Util.INTERNAL_ERROR);
+                return;
+            }
+            if (punishments.isEmpty()) {
+                invocation.source().sendMessage(Component.text("This player is not muted at the moment.").color(NamedTextColor.RED));
+                return;
+            }
+            if (punishments.size() > 1) {
+                invocation.source().sendMessage(Component.text("This player has multiple punishments with type (permanent) mute.").color(NamedTextColor.YELLOW));
+                for (Punishment punishment : punishments) {
+                    invocation.source().sendMessage(buildComponent(helper.buildPunishmentData(punishment), punishment));
+                }
             } else {
-                invocation.source().sendMessage(Component.text("The mute could not be annulled.").color(NamedTextColor.RED));
+                Punishment punishment = punishments.get(0);
+                if (helper.annul(invocation, punishment)) {
+                    invocation.source().sendMessage(Component.text("The mute was annulled.").color(NamedTextColor.GREEN));
+                    chatListener.update(playerUuid);
+                } else {
+                    invocation.source().sendMessage(Component.text("The mute could not be annulled.").color(NamedTextColor.RED));
+                }
             }
-        }
+        });
     }
 
     @Override

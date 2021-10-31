@@ -18,6 +18,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.stream.Collectors;
@@ -29,54 +30,58 @@ public class MuteCommand implements SimpleCommand {
     private final PunishmentManager punishmentManager;
     private final ProxyServer server;
     private final ChatListener chatListener;
+    private final ExecutorService service;
 
-    public MuteCommand(PunishmentManager punishmentManager, ProxyServer server, ChatListener chatListener) {
+    public MuteCommand(PunishmentManager punishmentManager, ProxyServer server, ChatListener chatListener, ExecutorService service) {
         this.punishmentManager = punishmentManager;
         this.server = server;
         this.chatListener = chatListener;
+        this.service = service;
     }
 
     @Override
     public void execute(Invocation invocation) {
         CommandSource source = invocation.source();
         if (invocation.arguments().length < 1) {
-            source.sendMessage(Component.text("invalid_usage").color(NamedTextColor.DARK_RED));
+            source.sendMessage(Component.text("Please user /mute <player> [reason]").color(NamedTextColor.DARK_RED));
             return;
         }
-        PunishmentHelper parser = new PunishmentHelper();
-        Optional<UUID> optionalUUID = parser.parseUuid(punishmentManager, invocation);
-        UUID uuid;
-        if (optionalUUID.isEmpty()) {
-            source.sendMessage(Component.text(invocation.arguments()[0] + " could not be found."));
-            return;
-        }
-        uuid = optionalUUID.get();
-        TextComponent reason = parser.parseComponent(1, invocation);
+        service.execute(() -> {
+            PunishmentHelper parser = new PunishmentHelper();
+            Optional<UUID> optionalUUID = parser.parseUuid(punishmentManager, invocation);
+            UUID uuid;
+            if (optionalUUID.isEmpty()) {
+                source.sendMessage(Component.text(invocation.arguments()[0] + " could not be found."));
+                return;
+            }
+            uuid = optionalUUID.get();
+            TextComponent reason = parser.parseComponent(1, invocation);
 
-        Mute mute;
-        try {
-            mute = punishmentManager.createPermanentMute(uuid, reason);
-            mute.punish().get(5, TimeUnit.SECONDS);
-        } catch (InterruptedException | ExecutionException | TimeoutException e) {
-            invocation.source().sendMessage(Util.INTERNAL_ERROR);
-            e.printStackTrace();
-            return;
-        }
-        String uuidString = uuid.toString().toLowerCase();
-        Component component = Component.text().append(
-                Component.text("You have muted the player ").color(NamedTextColor.RED),
-                copyComponent(invocation.arguments()[0]).color(NamedTextColor.YELLOW).decorate(TextDecoration.BOLD),
-                Component.text("/").color(NamedTextColor.RED),
-                copyComponent(uuidString).color(NamedTextColor.RED).decorate(TextDecoration.BOLD).color(NamedTextColor.YELLOW),
-                Component.text(" for ").color(NamedTextColor.RED),
-                reason,
-                Component.text(".").color(NamedTextColor.RED)
-        ).build();
-        source.sendMessage(component);
-        source.sendMessage(Component.text("Punishment id: " + mute.getPunishmentUuid().toString().toLowerCase()).color(NamedTextColor.YELLOW));
-        if (server.getPlayer(uuid).isPresent()) {
-            chatListener.getMutes().put(uuid, new ChatListener.MuteContainer().setMute(mute));
-        }
+            Mute mute;
+            try {
+                mute = punishmentManager.createPermanentMute(uuid, reason);
+                mute.punish().get(5, TimeUnit.SECONDS);
+            } catch (InterruptedException | ExecutionException | TimeoutException e) {
+                invocation.source().sendMessage(Util.INTERNAL_ERROR);
+                e.printStackTrace();
+                return;
+            }
+            String uuidString = uuid.toString().toLowerCase();
+            Component component = Component.text().append(
+                    Component.text("You have muted the player ").color(NamedTextColor.RED),
+                    copyComponent(invocation.arguments()[0]).color(NamedTextColor.YELLOW).decorate(TextDecoration.BOLD),
+                    Component.text("/").color(NamedTextColor.RED),
+                    copyComponent(uuidString).color(NamedTextColor.RED).decorate(TextDecoration.BOLD).color(NamedTextColor.YELLOW),
+                    Component.text(" for ").color(NamedTextColor.RED),
+                    reason,
+                    Component.text(".").color(NamedTextColor.RED)
+            ).build();
+            source.sendMessage(component);
+            source.sendMessage(Component.text("Punishment id: " + mute.getPunishmentUuid().toString().toLowerCase()).color(NamedTextColor.YELLOW));
+            if (server.getPlayer(uuid).isPresent()) {
+                chatListener.getMutes().put(uuid, new ChatListener.MuteContainer().setMute(mute));
+            }
+        });
     }
 
     @Override
@@ -94,6 +99,6 @@ public class MuteCommand implements SimpleCommand {
 
     @Override
     public boolean hasPermission(Invocation invocation) {
-        return invocation.source().hasPermission("punishment.command.tempmute");
+        return invocation.source().hasPermission("punishment.command.mute");
     }
 }

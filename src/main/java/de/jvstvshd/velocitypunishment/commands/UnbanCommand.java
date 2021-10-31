@@ -40,40 +40,42 @@ public class UnbanCommand implements SimpleCommand {
     @Override
     public void execute(Invocation invocation) {
         if (invocation.arguments().length < 1) {
-            invocation.source().sendMessage(Component.text("Invalid usage!").color(NamedTextColor.DARK_RED));
+            invocation.source().sendMessage(Component.text("Please use /unban <player>").color(NamedTextColor.DARK_RED));
             return;
         }
-        PunishmentHelper helper = new PunishmentHelper();
-        UUID playerUuid = helper.getPlayerUuid(0, service, manager, invocation);
-        if (playerUuid == null) {
-            invocation.source().sendMessage(Component.text("This player is not banned at the moment.").color(NamedTextColor.RED));
-            return;
-        }
-        List<Punishment> punishments;
-        try {
-            punishments = manager.getPunishments(playerUuid, service, StandardPunishmentType.BAN, StandardPunishmentType.PERMANENT_BAN).get(5, TimeUnit.SECONDS);
-        } catch (InterruptedException | ExecutionException | TimeoutException e) {
-            e.printStackTrace();
-            invocation.source().sendMessage(Util.INTERNAL_ERROR);
-            return;
-        }
-        if (punishments.isEmpty()) {
-            invocation.source().sendMessage(Component.text("This player is not banned at the moment.").color(NamedTextColor.RED));
-            return;
-        }
-        if (punishments.size() > 1) {
-            invocation.source().sendMessage(Component.text("This player has multiple punishments with type (permanent) ban.").color(NamedTextColor.YELLOW));
-            for (Punishment punishment : punishments) {
-                invocation.source().sendMessage(buildComponent(helper.buildPunishmentData(punishment), punishment));
+        service.execute(() -> {
+            PunishmentHelper helper = new PunishmentHelper();
+            UUID playerUuid = helper.getPlayerUuid(0, service, manager, invocation);
+            if (playerUuid == null) {
+                invocation.source().sendMessage(Component.text("This player is not banned at the moment.").color(NamedTextColor.RED));
+                return;
             }
-        } else {
-            Punishment punishment = punishments.get(0);
-            if (helper.annul(invocation, punishment)) {
-                invocation.source().sendMessage(Component.text("The ban was annulled.").color(NamedTextColor.GREEN));
+            List<Punishment> punishments;
+            try {
+                punishments = manager.getPunishments(playerUuid, service, StandardPunishmentType.BAN, StandardPunishmentType.PERMANENT_BAN).get(5, TimeUnit.SECONDS);
+            } catch (InterruptedException | ExecutionException | TimeoutException e) {
+                e.printStackTrace();
+                invocation.source().sendMessage(Util.INTERNAL_ERROR);
+                return;
+            }
+            if (punishments.isEmpty()) {
+                invocation.source().sendMessage(Component.text("This player is not banned at the moment.").color(NamedTextColor.RED));
+                return;
+            }
+            if (punishments.size() > 1) {
+                invocation.source().sendMessage(Component.text("This player has multiple punishments with type (permanent) ban.").color(NamedTextColor.YELLOW));
+                for (Punishment punishment : punishments) {
+                    invocation.source().sendMessage(buildComponent(helper.buildPunishmentData(punishment), punishment));
+                }
             } else {
-                invocation.source().sendMessage(Component.text("The ban could not be annulled.").color(NamedTextColor.RED));
+                Punishment punishment = punishments.get(0);
+                if (helper.annul(invocation, punishment)) {
+                    invocation.source().sendMessage(Component.text("The ban was annulled.").color(NamedTextColor.GREEN));
+                } else {
+                    invocation.source().sendMessage(Component.text("The ban could not be annulled.").color(NamedTextColor.RED));
+                }
             }
-        }
+        });
     }
 
     @Override
@@ -102,7 +104,7 @@ public class UnbanCommand implements SimpleCommand {
 
     @Override
     public boolean hasPermission(Invocation invocation) {
-        return invocation.source().hasPermission("punishment.unban");
+        return invocation.source().hasPermission("punishment.command.unban");
     }
 
     private Component buildComponent(Component dataComponent, Punishment punishment) {
