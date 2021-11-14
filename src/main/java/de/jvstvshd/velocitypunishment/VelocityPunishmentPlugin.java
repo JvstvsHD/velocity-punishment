@@ -1,10 +1,7 @@
 package de.jvstvshd.velocitypunishment;
 
-import com.google.common.collect.ImmutableMap;
 import com.google.inject.Inject;
 import com.velocitypowered.api.command.CommandManager;
-import com.velocitypowered.api.command.CommandMeta;
-import com.velocitypowered.api.command.SimpleCommand;
 import com.velocitypowered.api.event.EventManager;
 import com.velocitypowered.api.event.Subscribe;
 import com.velocitypowered.api.event.proxy.ProxyInitializeEvent;
@@ -18,7 +15,9 @@ import de.jvstvshd.velocitypunishment.config.ConfigurationManager;
 import de.jvstvshd.velocitypunishment.listener.ChatListener;
 import de.jvstvshd.velocitypunishment.listener.ConnectListener;
 import de.jvstvshd.velocitypunishment.punishment.PunishmentManager;
-import de.jvstvshd.velocitypunishment.punishment.impl.StandardPunishmentManager;
+import de.jvstvshd.velocitypunishment.punishment.impl.DefaultPlayerResolver;
+import de.jvstvshd.velocitypunishment.punishment.impl.DefaultPunishmentManager;
+import de.jvstvshd.velocitypunishment.util.PlayerResolver;
 import org.slf4j.Logger;
 
 import java.io.IOException;
@@ -27,8 +26,6 @@ import java.nio.file.Paths;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
-import java.util.HashMap;
-import java.util.Map;
 import java.util.Properties;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -39,28 +36,27 @@ public class VelocityPunishmentPlugin {
     private final ProxyServer server;
     private final Logger logger;
     private final ConfigurationManager configurationManager;
-    private final Path dataDirectory;
     private PunishmentManager punishmentManager;
     private HikariDataSource dataSource;
-    private final Map<String, SimpleCommand> commandMap = new HashMap<>();
+    private final PlayerResolver playerResolver;
 
     @Inject
     public VelocityPunishmentPlugin(ProxyServer server, Logger logger, @DataDirectory Path dataDirectory) {
         this.server = server;
         this.logger = logger;
-        this.dataDirectory = dataDirectory;
         this.configurationManager = new ConfigurationManager(Paths.get(dataDirectory.toAbsolutePath().toString(), "config.json"));
+        this.playerResolver = new DefaultPlayerResolver(server);
     }
 
     @Subscribe
-    public void onProxyInitialization(ProxyInitializeEvent event) throws ReflectiveOperationException {
+    public void onProxyInitialization(ProxyInitializeEvent event) {
         try {
             configurationManager.load();
         } catch (IOException e) {
             logger.error("Could not load configuration", e);
         }
         dataSource = createDataSource();
-        punishmentManager = new StandardPunishmentManager(server, dataSource);
+        punishmentManager = new DefaultPunishmentManager(server, dataSource, playerResolver);
         try {
             initDataSource();
         } catch (SQLException e) {
@@ -76,17 +72,13 @@ public class VelocityPunishmentPlugin {
         eventManager.register(this, new ConnectListener(punishmentManager, Executors.newCachedThreadPool(), server, chatListener));
         eventManager.register(this, chatListener);
 
-        commandManager.register(commandManager.metaBuilder("ban").build(), new BanCommand(server, punishmentManager, service));
-        commandManager.register(commandManager.metaBuilder("tempban").build(), new TempbanCommand(punishmentManager, server, service));
-        commandManager.register(commandManager.metaBuilder("unban").build(), new UnbanCommand(punishmentManager, dataSource, service));
-        commandManager.register(commandManager.metaBuilder("punishment").build(), new PunishmentCommand(service, punishmentManager, dataSource, server, chatListener));
-        commandManager.register(commandManager.metaBuilder("mute").build(), new MuteCommand(punishmentManager, server, chatListener, service));
-        commandManager.register(commandManager.metaBuilder("tempmute").build(), new TempmuteCommand(punishmentManager, server, service));
-        commandManager.register(commandManager.metaBuilder("unmute").build(), new UnmuteCommand(punishmentManager, dataSource, service, chatListener));
-    }
-
-    public ProxyServer getServer() {
-        return server;
+        commandManager.register(commandManager.metaBuilder("ban").build(), new BanCommand(server, punishmentManager, playerResolver));
+        commandManager.register(commandManager.metaBuilder("tempban").build(), new TempbanCommand(punishmentManager, server, service, playerResolver));
+        commandManager.register(commandManager.metaBuilder("unban").build(), new UnbanCommand(punishmentManager, dataSource, service, playerResolver));
+        commandManager.register(commandManager.metaBuilder("punishment").build(), new PunishmentCommand(service, punishmentManager, dataSource, server, chatListener, playerResolver));
+        commandManager.register(commandManager.metaBuilder("mute").build(), new MuteCommand(punishmentManager, server, chatListener, service, playerResolver));
+        commandManager.register(commandManager.metaBuilder("tempmute").build(), new TempmuteCommand(punishmentManager, server, service, playerResolver));
+        commandManager.register(commandManager.metaBuilder("unmute").build(), new UnmuteCommand(punishmentManager, dataSource, service, chatListener, playerResolver));
     }
 
     public PunishmentManager getPunishmentManager() {
@@ -113,14 +105,5 @@ public class VelocityPunishmentPlugin {
                         "reason VARCHAR (1000), punishment_id VARCHAR (36))")) {
             statement.execute();
         }
-    }
-
-    @Deprecated(forRemoval = true)
-    private void registerCommand(CommandMeta meta, SimpleCommand command) {
-        server.getCommandManager().register(meta, command);
-    }
-
-    public Map<String, SimpleCommand> getCommandMap() {
-        return ImmutableMap.copyOf(commandMap);
     }
 }

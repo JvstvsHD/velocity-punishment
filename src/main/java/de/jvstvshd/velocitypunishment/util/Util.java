@@ -66,7 +66,7 @@ public class Util {
         });
     }
 
-    public static UUID parse(String uuidString) {
+    public static UUID parseUuid(String uuidString) {
         try {
             return UUID.fromString(uuidString);
         } catch (IllegalArgumentException e) {
@@ -104,6 +104,7 @@ public class Util {
         return list.stream().sorted(Comparator.comparing(TemporalPunishment::getDuration)).collect(Collectors.toList());
     }
 
+    @SuppressWarnings("unchecked")
     public static <T extends Punishment> List<T> convert(List<? super T> list) {
         List<T> out = new ArrayList<>();
         for (Object o : list) {

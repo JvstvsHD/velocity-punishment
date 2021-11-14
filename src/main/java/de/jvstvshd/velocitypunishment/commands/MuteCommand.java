@@ -8,6 +8,7 @@ import de.jvstvshd.velocitypunishment.listener.ChatListener;
 import de.jvstvshd.velocitypunishment.punishment.Mute;
 import de.jvstvshd.velocitypunishment.punishment.PunishmentHelper;
 import de.jvstvshd.velocitypunishment.punishment.PunishmentManager;
+import de.jvstvshd.velocitypunishment.util.PlayerResolver;
 import de.jvstvshd.velocitypunishment.util.Util;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.TextComponent;
@@ -31,12 +32,14 @@ public class MuteCommand implements SimpleCommand {
     private final ProxyServer server;
     private final ChatListener chatListener;
     private final ExecutorService service;
+    private final PlayerResolver playerResolver;
 
-    public MuteCommand(PunishmentManager punishmentManager, ProxyServer server, ChatListener chatListener, ExecutorService service) {
+    public MuteCommand(PunishmentManager punishmentManager, ProxyServer server, ChatListener chatListener, ExecutorService service, PlayerResolver playerResolver) {
         this.punishmentManager = punishmentManager;
         this.server = server;
         this.chatListener = chatListener;
         this.service = service;
+        this.playerResolver = playerResolver;
     }
 
     @Override
@@ -48,7 +51,7 @@ public class MuteCommand implements SimpleCommand {
         }
         service.execute(() -> {
             PunishmentHelper parser = new PunishmentHelper();
-            Optional<UUID> optionalUUID = parser.parseUuid(punishmentManager, invocation);
+            Optional<UUID> optionalUUID = parser.parseUuid(playerResolver, invocation);
             UUID uuid;
             if (optionalUUID.isEmpty()) {
                 source.sendMessage(Component.text(invocation.arguments()[0] + " could not be found."));

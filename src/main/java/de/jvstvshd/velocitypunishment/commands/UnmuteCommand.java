@@ -8,6 +8,7 @@ import de.jvstvshd.velocitypunishment.punishment.Punishment;
 import de.jvstvshd.velocitypunishment.punishment.PunishmentHelper;
 import de.jvstvshd.velocitypunishment.punishment.PunishmentManager;
 import de.jvstvshd.velocitypunishment.punishment.StandardPunishmentType;
+import de.jvstvshd.velocitypunishment.util.PlayerResolver;
 import de.jvstvshd.velocitypunishment.util.Util;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.event.ClickEvent;
@@ -32,12 +33,14 @@ public class UnmuteCommand implements SimpleCommand {
     private final PunishmentManager manager;
     private final DataSource dataSource;
     private final ChatListener chatListener;
+    private final PlayerResolver playerResolver;
 
-    public UnmuteCommand(PunishmentManager punishmentManager, HikariDataSource dataSource, ExecutorService service, ChatListener chatListener) {
+    public UnmuteCommand(PunishmentManager punishmentManager, HikariDataSource dataSource, ExecutorService service, ChatListener chatListener, PlayerResolver playerResolver) {
         this.manager = punishmentManager;
         this.dataSource = dataSource;
         this.service = service;
         this.chatListener = chatListener;
+        this.playerResolver = playerResolver;
     }
 
     @Override
@@ -48,7 +51,7 @@ public class UnmuteCommand implements SimpleCommand {
         }
         service.execute(() -> {
             PunishmentHelper helper = new PunishmentHelper();
-            UUID playerUuid = helper.getPlayerUuid(0, service, manager, invocation);
+            UUID playerUuid = helper.getPlayerUuid(0, service, playerResolver, invocation);
             if (playerUuid == null) {
                 invocation.source().sendMessage(Component.text("This player is not muted at the moment.").color(NamedTextColor.RED));
                 return;
@@ -72,12 +75,15 @@ public class UnmuteCommand implements SimpleCommand {
                 }
             } else {
                 Punishment punishment = punishments.get(0);
-                if (helper.annul(invocation, punishment)) {
-                    invocation.source().sendMessage(Component.text("The mute was annulled.").color(NamedTextColor.GREEN));
+                punishment.cancel().whenCompleteAsync((unused, throwable) -> {
+                    if (throwable != null) {
+                        throwable.printStackTrace();
+                        invocation.source().sendMessage(Util.INTERNAL_ERROR);
+                        return;
+                    }
+                    invocation.source().sendMessage(Component.text("The ban was annulled.").color(NamedTextColor.GREEN));
                     chatListener.update(playerUuid);
-                } else {
-                    invocation.source().sendMessage(Component.text("The mute could not be annulled.").color(NamedTextColor.RED));
-                }
+                });
             }
         });
     }

@@ -8,6 +8,7 @@ import de.jvstvshd.velocitypunishment.listener.ChatListener;
 import de.jvstvshd.velocitypunishment.punishment.Punishment;
 import de.jvstvshd.velocitypunishment.punishment.PunishmentHelper;
 import de.jvstvshd.velocitypunishment.punishment.PunishmentManager;
+import de.jvstvshd.velocitypunishment.util.PlayerResolver;
 import de.jvstvshd.velocitypunishment.util.Util;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.event.ClickEvent;
@@ -31,13 +32,15 @@ public class PunishmentCommand implements SimpleCommand {
     private final DataSource dataSource;
     private final ProxyServer server;
     private final ChatListener chatListener;
+    private final PlayerResolver playerResolver;
 
-    public PunishmentCommand(ExecutorService service, PunishmentManager punishmentManager, DataSource dataSource, ProxyServer server, ChatListener chatListener) {
+    public PunishmentCommand(ExecutorService service, PunishmentManager punishmentManager, DataSource dataSource, ProxyServer server, ChatListener chatListener, PlayerResolver playerResolver) {
         this.service = service;
         this.punishmentManager = punishmentManager;
         this.dataSource = dataSource;
         this.server = server;
         this.chatListener = chatListener;
+        this.playerResolver = playerResolver;
     }
 
     private final static List<String> options = ImmutableList.of("annul", "remove", "info", "change");
@@ -53,7 +56,7 @@ public class PunishmentCommand implements SimpleCommand {
         if (arguments[0].equalsIgnoreCase("playerinfo")) {
             service.execute(() -> {
                 PunishmentHelper helper = new PunishmentHelper();
-                UUID playerUuid = helper.getPlayerUuid(1, service, punishmentManager, invocation);
+                UUID playerUuid = helper.getPlayerUuid(1, service, playerResolver, invocation);
                 if (playerUuid == null) {
                     invocation.source().sendMessage(Component.text("This player is not banned at the moment.").color(NamedTextColor.RED));
                     return;
@@ -81,7 +84,7 @@ public class PunishmentCommand implements SimpleCommand {
         }
         UUID uuid;
         try {
-            uuid = Util.parse(arguments[0]);
+            uuid = Util.parseUuid(arguments[0]);
         } catch (IllegalArgumentException e) {
             source.sendMessage(Component.text().append(Component.text("Could not parse string '").color(NamedTextColor.RED),
                     Component.text(arguments[0]).color(NamedTextColor.YELLOW),
@@ -95,47 +98,32 @@ public class PunishmentCommand implements SimpleCommand {
                             Component.text(option).color(NamedTextColor.YELLOW)));
             return;
         }
-        service.execute(() -> {
-            Punishment punishment;
-            try {
-                Optional<? extends Punishment> optionalPunishment = punishmentManager.getPunishment(uuid, service).get(5, TimeUnit.SECONDS);
-                if (optionalPunishment.isEmpty()) {
-                    source.sendMessage(Component.text().append(Component.text("Could not find a punishment for id '").color(NamedTextColor.RED),
-                            Component.text(uuid.toString().toLowerCase(Locale.ROOT)).color(NamedTextColor.YELLOW),
-                            Component.text("'.").color(NamedTextColor.RED)));
-                    return;
-                }
-                punishment = optionalPunishment.get();
-            } catch (InterruptedException | TimeoutException | ExecutionException e) {
-                e.printStackTrace();
+        punishmentManager.getPunishment(uuid, service).whenCompleteAsync((optional, throwable) -> {
+            if (throwable != null) {
+                throwable.printStackTrace();
                 source.sendMessage(Util.INTERNAL_ERROR);
                 return;
             }
+            Punishment punishment;
+            if (optional.isEmpty()) {
+                source.sendMessage(Component.text().append(Component.text("Could not find a punishment for id '").color(NamedTextColor.RED),
+                        Component.text(uuid.toString().toLowerCase(Locale.ROOT)).color(NamedTextColor.YELLOW),
+                        Component.text("'.").color(NamedTextColor.RED)));
+                return;
+            }
+            punishment = optional.get();
             switch (option) {
-                case "annul":
-                case "remove":
-                    try {
-                        if (punishment.annul().get(5, TimeUnit.SECONDS)) {
-                            source.sendMessage(Component.text("The punishment was successfully annulled.").color(NamedTextColor.GREEN));
-                            chatListener.update(uuid);
-                        } else {
-                            source.sendMessage(Component.text().append(Component.text("Could not annul punishment for id '").color(NamedTextColor.RED),
-                                    Component.text(uuid.toString().toLowerCase()).color(NamedTextColor.YELLOW),
-                                    Component.text("'.").color(NamedTextColor.RED)));
-                            return;
-                        }
-                    } catch (Exception e) {
-                        e.printStackTrace();
+                case "annul", "remove" -> punishment.cancel().whenCompleteAsync((unused, t) -> {
+                    if (t != null) {
+                        t.printStackTrace();
                         source.sendMessage(Util.INTERNAL_ERROR);
                         return;
                     }
-                    break;
-                case "info":
-                    source.sendMessage(new PunishmentHelper().buildPunishmentData(punishment));
-                    break;
-                case "change":
-                    source.sendMessage(Component.text("Soon™️"));
-                    break;
+                    source.sendMessage(Component.text("The punishment was successfully annulled.").color(NamedTextColor.GREEN));
+                    chatListener.update(uuid);
+                });
+                case "info" -> source.sendMessage(new PunishmentHelper().buildPunishmentData(punishment));
+                case "change" -> source.sendMessage(Component.text("Soon™️"));
             }
         });
 

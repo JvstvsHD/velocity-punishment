@@ -5,6 +5,7 @@ import de.jvstvshd.velocitypunishment.punishment.Kick;
 import de.jvstvshd.velocitypunishment.punishment.PunishmentManager;
 import de.jvstvshd.velocitypunishment.punishment.PunishmentType;
 import de.jvstvshd.velocitypunishment.punishment.StandardPunishmentType;
+import de.jvstvshd.velocitypunishment.util.PlayerResolver;
 import net.kyori.adventure.text.Component;
 
 import javax.sql.DataSource;
@@ -13,25 +14,25 @@ import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
 
-public class StandardKick extends AbstractPunishment implements Kick {
+public class DefaultKick extends AbstractPunishment implements Kick {
 
-    public StandardKick(UUID playerUuid, Component reason, DataSource dataSource, ExecutorService service, PunishmentManager punishmentManager) {
-        super(playerUuid, reason, dataSource, service, punishmentManager);
+    public DefaultKick(UUID playerUuid, Component reason, DataSource dataSource, PlayerResolver playerResolver, PunishmentManager punishmentManager, ExecutorService service) {
+        super(playerUuid, reason, dataSource, playerResolver, punishmentManager, service);
     }
 
-    public StandardKick(UUID playerUuid, Component reason, DataSource dataSource, ExecutorService service, PunishmentManager punishmentManager, UUID punishmentUuid) {
-        super(playerUuid, reason, dataSource, service, punishmentManager, punishmentUuid);
+    public DefaultKick(UUID playerUuid, Component reason, DataSource dataSource, ExecutorService service, PunishmentManager punishmentManager, UUID punishmentUuid, PlayerResolver playerResolver) {
+        super(playerUuid, reason, dataSource, service, punishmentManager, punishmentUuid, playerResolver);
     }
 
     @Override
-    public CompletableFuture<Boolean> punish() {
+    public CompletableFuture<Void> punish() {
         Optional<Player> optPlayer = getPunishmentManager().getServer().getPlayer(getPlayerUuid());
         if (optPlayer.isEmpty())
             throw new IllegalArgumentException("Invalid player was not found. This could be because " +
                     "a) this player does not exist (wrong uuid)\n" +
                     "b) the player is not online and so can't be kicked.");
         optPlayer.get().disconnect(getReason());
-        return CompletableFuture.completedFuture(true);
+        return CompletableFuture.completedFuture(null);
     }
 
     @Override

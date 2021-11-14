@@ -1,6 +1,7 @@
 package de.jvstvshd.velocitypunishment.punishment;
 
 import com.velocitypowered.api.command.SimpleCommand;
+import de.jvstvshd.velocitypunishment.util.PlayerResolver;
 import de.jvstvshd.velocitypunishment.util.Util;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.TextComponent;
@@ -12,16 +13,6 @@ import java.util.UUID;
 import java.util.concurrent.*;
 
 public class PunishmentHelper {
-
-    public boolean annul(SimpleCommand.Invocation invocation, Punishment punishment) {
-        try {
-            return punishment.annul().get(5, TimeUnit.SECONDS);
-        } catch (InterruptedException | ExecutionException | TimeoutException e) {
-            e.printStackTrace();
-            invocation.source().sendMessage(Util.INTERNAL_ERROR);
-            return false;
-        }
-    }
 
     public Component buildPunishmentData(Punishment punishment) {
         return Component.text()
@@ -64,9 +55,9 @@ public class PunishmentHelper {
         }
     }
 
-    public Optional<UUID> parseUuid(PunishmentManager punishmentManager, SimpleCommand.Invocation invocation) {
+    public Optional<UUID> parseUuid(PlayerResolver playerResolver, SimpleCommand.Invocation invocation) {
         try {
-            return Optional.ofNullable(punishmentManager.getPlayerUuid(invocation.arguments()[0], Executors.newSingleThreadExecutor()).get(10, TimeUnit.SECONDS));
+            return Optional.ofNullable(playerResolver.getOrQueryPlayerUuid(invocation.arguments()[0], Executors.newSingleThreadExecutor()).get(10, TimeUnit.SECONDS));
         } catch (InterruptedException | ExecutionException | TimeoutException e) {
             invocation.source().sendMessage(Component.text().append(Component.text("Cannot parse duration: ").color(NamedTextColor.RED),
                     Component.text(e.getMessage()).color(NamedTextColor.YELLOW)));
@@ -85,18 +76,18 @@ public class PunishmentHelper {
         return LegacyComponentSerializer.legacyAmpersand().deserialize(builder.toString());
     }
 
-    public UUID getPlayerUuid(int argumentIndex, ExecutorService service, PunishmentManager punishmentManager, SimpleCommand.Invocation invocation) {
+    public UUID getPlayerUuid(int argumentIndex, ExecutorService service, PlayerResolver playerResolver, SimpleCommand.Invocation invocation) {
         String argument = invocation.arguments()[argumentIndex];
         if (argument.length() <= 16) {
             try {
-                return punishmentManager.getPlayerUuid(argument, service).get(5, TimeUnit.SECONDS);
+                return playerResolver.getOrQueryPlayerUuid(argument, service).get(5, TimeUnit.SECONDS);
             } catch (InterruptedException | TimeoutException | ExecutionException e) {
                 e.printStackTrace();
                 return null;
             }
         } else if (argument.length() <= 36) {
             try {
-                return Util.parse(argument);
+                return Util.parseUuid(argument);
             } catch (Exception e) {
                 return null;
             }

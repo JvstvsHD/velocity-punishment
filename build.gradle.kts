@@ -3,7 +3,7 @@ plugins {
 }
 
 group = "de.jvstvshd.punishment"
-version = "1.0.0-SNAPSHOT"
+version = "1.0.0-beta"
 
 repositories {
     maven(url = "https://nexus.velocitypowered.com/repository/maven-public/")

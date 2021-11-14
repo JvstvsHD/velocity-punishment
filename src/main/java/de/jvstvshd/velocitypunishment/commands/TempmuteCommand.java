@@ -8,6 +8,7 @@ import de.jvstvshd.velocitypunishment.punishment.Mute;
 import de.jvstvshd.velocitypunishment.punishment.PunishmentDuration;
 import de.jvstvshd.velocitypunishment.punishment.PunishmentHelper;
 import de.jvstvshd.velocitypunishment.punishment.PunishmentManager;
+import de.jvstvshd.velocitypunishment.util.PlayerResolver;
 import de.jvstvshd.velocitypunishment.util.Util;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.TextComponent;
@@ -29,11 +30,13 @@ public class TempmuteCommand implements SimpleCommand {
     private final PunishmentManager punishmentManager;
     private final ProxyServer proxyServer;
     private final ExecutorService service;
+    private final PlayerResolver playerResolver;
 
-    public TempmuteCommand(PunishmentManager punishmentManager, ProxyServer proxyServer, ExecutorService service) {
+    public TempmuteCommand(PunishmentManager punishmentManager, ProxyServer proxyServer, ExecutorService service, PlayerResolver playerResolver) {
         this.punishmentManager = punishmentManager;
         this.proxyServer = proxyServer;
         this.service = service;
+        this.playerResolver = playerResolver;
     }
 
     @Override
@@ -45,7 +48,7 @@ public class TempmuteCommand implements SimpleCommand {
         }
         service.execute(() -> {
             PunishmentHelper parser = new PunishmentHelper();
-            Optional<UUID> optionalUUID = parser.parseUuid(punishmentManager, invocation);
+            Optional<UUID> optionalUUID = parser.parseUuid(playerResolver, invocation);
             UUID uuid;
             if (optionalUUID.isEmpty()) {
                 source.sendMessage(Component.text(invocation.arguments()[0] + " could not be found."));

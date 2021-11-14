@@ -8,7 +8,7 @@ import de.jvstvshd.velocitypunishment.punishment.Mute;
 import de.jvstvshd.velocitypunishment.punishment.Punishment;
 import de.jvstvshd.velocitypunishment.punishment.PunishmentManager;
 import de.jvstvshd.velocitypunishment.punishment.StandardPunishmentType;
-import de.jvstvshd.velocitypunishment.punishment.impl.StandardMute;
+import de.jvstvshd.velocitypunishment.punishment.impl.DefaultMute;
 import de.jvstvshd.velocitypunishment.util.Util;
 
 import java.util.HashMap;
@@ -75,7 +75,7 @@ public class ChatListener {
     public enum MuteType {
         MUTED,
         NOT_MUTED,
-        LOADING;
+        LOADING
     }
 
     public static class MuteContainer {
@@ -100,7 +100,7 @@ public class ChatListener {
         }
 
         public MuteContainer setMute(Mute mute) {
-            if (mute != null && ((StandardMute)mute).isValid())
+            if (mute != null && ((DefaultMute) mute).isValid())
                 this.type = MuteType.MUTED;
             this.mute = mute;
             return this;

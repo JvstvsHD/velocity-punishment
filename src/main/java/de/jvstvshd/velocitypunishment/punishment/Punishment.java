@@ -36,17 +36,18 @@ public interface Punishment extends ReasonHolder {
 
     /**
      * Punishes the player finally.
-     * @return true, if the action was successfully or false if not wrapped in a {@link CompletableFuture}.
      *
+     * @return true, if the action was successfully or false if not wrapped in a {@link CompletableFuture}.
      */
-    CompletableFuture<Boolean> punish();
+    CompletableFuture<Void> punish();
 
     /**
      * Annuls this punishment.
+     *
      * @return true, if the action was successfully or false if not wrapped in a {@link CompletableFuture}.
-     * @throws UnsupportedOperationException if this action is not supported (example: {@link Kick#annul()})
+     * @throws UnsupportedOperationException if this action is not supported (example: {@link Kick#cancel()})
      */
-    CompletableFuture<Boolean> annul();
+    CompletableFuture<Void> cancel();
 
     /**
      * Changes the duration and reason of this punishment. This method can be used if a player created an appeal an it was accepted.

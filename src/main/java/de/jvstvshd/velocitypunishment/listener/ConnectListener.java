@@ -20,9 +20,15 @@ public record ConnectListener(PunishmentManager punishmentManager,
                               ExecutorService service, ProxyServer proxyServer, ChatListener chatListener) {
 
     @Subscribe()
-    public void onConnect(LoginEvent event) throws ExecutionException, InterruptedException, TimeoutException {
-        List<Punishment> punishments = punishmentManager.getPunishments(event.getPlayer().getUniqueId(), service, StandardPunishmentType.BAN,
-                StandardPunishmentType.PERMANENT_BAN, StandardPunishmentType.MUTE, StandardPunishmentType.PERMANENT_MUTE).get(10, TimeUnit.SECONDS);
+    public void onConnect(LoginEvent event) {
+        List<Punishment> punishments;
+        try {
+            punishments = punishmentManager.getPunishments(event.getPlayer().getUniqueId(), service, StandardPunishmentType.BAN,
+                    StandardPunishmentType.PERMANENT_BAN, StandardPunishmentType.MUTE, StandardPunishmentType.PERMANENT_MUTE).get(10, TimeUnit.SECONDS);
+        } catch (InterruptedException | ExecutionException | TimeoutException e) {
+            e.printStackTrace();
+            return;
+        }
         List<Ban> bans = new ArrayList<>();
         List<Mute> mutes = new ArrayList<>();
         for (Punishment punishment : punishments) {
@@ -44,24 +50,17 @@ public record ConnectListener(PunishmentManager punishmentManager,
             Component deny = ban.createFullReason();
             event.setResult(ResultedEvent.ComponentResult.denied(deny));
         } else {
-            service.execute(() -> {
-                try {
-                    boolean result = ban.annul().get(5, TimeUnit.SECONDS);
-                    if (result) {
-                        proxyServer.getConsoleCommandSource().sendMessage(Component.text()
-                                .append(Component.text("Ban ").color(NamedTextColor.GREEN),
-                                        Component.text("'" + ban.getPunishmentUuid().toString().toLowerCase() + "'")
-                                                .color(NamedTextColor.YELLOW),
-                                        Component.text("was annulled.").color(NamedTextColor.GREEN)));
-                    } else {
-                        proxyServer.getConsoleCommandSource().sendMessage(Component.text("Could not annul ban '" +
-                                ban.getPunishmentUuid().toString().toLowerCase() + "'.").color(NamedTextColor.RED));
-                    }
-                } catch (InterruptedException | TimeoutException | ExecutionException e) {
-                    e.printStackTrace();
+            service.execute(() -> ban.cancel().whenCompleteAsync((unused, throwable) -> {
+                if (throwable != null) {
+                    throwable.printStackTrace();
+                    return;
                 }
-            });
+                proxyServer.getConsoleCommandSource().sendMessage(Component.text()
+                        .append(Component.text("Ban ").color(NamedTextColor.GREEN),
+                                Component.text("'" + ban.getPunishmentUuid().toString().toLowerCase() + "'")
+                                        .color(NamedTextColor.YELLOW),
+                                Component.text("was annulled.").color(NamedTextColor.GREEN)));
+            }));
         }
-
     }
 }

@@ -7,6 +7,7 @@ import de.jvstvshd.velocitypunishment.punishment.Punishment;
 import de.jvstvshd.velocitypunishment.punishment.PunishmentHelper;
 import de.jvstvshd.velocitypunishment.punishment.PunishmentManager;
 import de.jvstvshd.velocitypunishment.punishment.StandardPunishmentType;
+import de.jvstvshd.velocitypunishment.util.PlayerResolver;
 import de.jvstvshd.velocitypunishment.util.Util;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.event.ClickEvent;
@@ -30,11 +31,13 @@ public class UnbanCommand implements SimpleCommand {
     private final ExecutorService service;
     private final PunishmentManager manager;
     private final DataSource dataSource;
+    private final PlayerResolver playerResolver;
 
-    public UnbanCommand(PunishmentManager punishmentManager, HikariDataSource dataSource, ExecutorService service) {
+    public UnbanCommand(PunishmentManager punishmentManager, HikariDataSource dataSource, ExecutorService service, PlayerResolver playerResolver) {
         this.manager = punishmentManager;
         this.dataSource = dataSource;
         this.service = service;
+        this.playerResolver = playerResolver;
     }
 
     @Override
@@ -45,7 +48,7 @@ public class UnbanCommand implements SimpleCommand {
         }
         service.execute(() -> {
             PunishmentHelper helper = new PunishmentHelper();
-            UUID playerUuid = helper.getPlayerUuid(0, service, manager, invocation);
+            UUID playerUuid = helper.getPlayerUuid(0, service, playerResolver, invocation);
             if (playerUuid == null) {
                 invocation.source().sendMessage(Component.text("This player is not banned at the moment.").color(NamedTextColor.RED));
                 return;
@@ -69,11 +72,14 @@ public class UnbanCommand implements SimpleCommand {
                 }
             } else {
                 Punishment punishment = punishments.get(0);
-                if (helper.annul(invocation, punishment)) {
+                punishment.cancel().whenCompleteAsync((unused, throwable) -> {
+                    if (throwable != null) {
+                        throwable.printStackTrace();
+                        invocation.source().sendMessage(Util.INTERNAL_ERROR);
+                        return;
+                    }
                     invocation.source().sendMessage(Component.text("The ban was annulled.").color(NamedTextColor.GREEN));
-                } else {
-                    invocation.source().sendMessage(Component.text("The ban could not be annulled.").color(NamedTextColor.RED));
-                }
+                });
             }
         });
     }

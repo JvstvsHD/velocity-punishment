@@ -8,10 +8,11 @@ import java.util.concurrent.CompletableFuture;
  * Super interface for all kick implementation.<br>
  * Unsupported operations:
  * <ul>
- *     <li>{@link #annul()}</li>
+ *     <li>{@link #cancel()}</li>
  *     <li>{@link #change(PunishmentDuration, Component)}</li>
  * </ul>
- * @see com.velocitypowered.api.proxy.Player#disconnect(Component) 
+ *
+ * @see com.velocitypowered.api.proxy.Player#disconnect(Component)
  */
 public interface Kick extends Punishment {
 
@@ -21,7 +22,7 @@ public interface Kick extends Punishment {
     }
 
     @Override
-    default CompletableFuture<Boolean> annul() {
+    default CompletableFuture<Void> cancel() {
         throw new UnsupportedOperationException("Cannot annul kick since a kick lasts only one moment");
     }
 

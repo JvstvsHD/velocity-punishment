@@ -2,6 +2,7 @@ package de.jvstvshd.velocitypunishment.punishment.impl;
 
 import de.jvstvshd.velocitypunishment.punishment.Punishment;
 import de.jvstvshd.velocitypunishment.punishment.PunishmentManager;
+import de.jvstvshd.velocitypunishment.util.PlayerResolver;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
 
@@ -19,6 +20,7 @@ public abstract class AbstractPunishment implements Punishment {
     private final UUID playerUuid;
     private final UUID punishmentUuid;
     private final PunishmentManager punishmentManager;
+    private final PlayerResolver playerResolver;
 
     protected final static String APPLY_PUNISHMENT = "INSERT INTO velocity_punishment" +
             " (uuid, name, type, expiration, reason, punishment_id) VALUES (?, ?, ?, ?, ?, ?)";
@@ -27,17 +29,18 @@ public abstract class AbstractPunishment implements Punishment {
     protected final static String APPLY_CHANGE = "UPDATE velocity_punishment SET reason = ?, expiration = ?, permanent = ? WHERE punishment_id = ?";
     private boolean validity;
 
-    public AbstractPunishment(UUID playerUuid, Component reason, DataSource dataSource, ExecutorService service, PunishmentManager punishmentManager) {
-        this(playerUuid, reason, dataSource, service, punishmentManager, UUID.randomUUID());
+    public AbstractPunishment(UUID playerUuid, Component reason, DataSource dataSource, PlayerResolver playerResolver, PunishmentManager punishmentManager, ExecutorService service) {
+        this(playerUuid, reason, dataSource, service, punishmentManager, UUID.randomUUID(), playerResolver);
     }
 
-    public AbstractPunishment(UUID playerUuid, Component reason, DataSource dataSource, ExecutorService service, PunishmentManager punishmentManager, UUID punishmentUuid) {
+    public AbstractPunishment(UUID playerUuid, Component reason, DataSource dataSource, ExecutorService service, PunishmentManager punishmentManager, UUID punishmentUuid, PlayerResolver playerResolver) {
         this.reason = reason;
         this.dataSource = dataSource;
         this.service = service;
         this.playerUuid = playerUuid;
         this.punishmentManager = punishmentManager;
         this.punishmentUuid = punishmentUuid;
+        this.playerResolver = playerResolver;
         this.validity = true;
     }
 
@@ -107,5 +110,9 @@ public abstract class AbstractPunishment implements Punishment {
         if (!isValid()) {
             throw new IllegalStateException("punishment is invalid");
         }
+    }
+
+    public PlayerResolver getPlayerResolver() {
+        return playerResolver;
     }
 }
