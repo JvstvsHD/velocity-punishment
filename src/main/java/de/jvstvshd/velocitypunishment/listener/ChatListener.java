@@ -4,12 +4,14 @@ import com.velocitypowered.api.event.Subscribe;
 import com.velocitypowered.api.event.connection.DisconnectEvent;
 import com.velocitypowered.api.event.player.PlayerChatEvent;
 import com.velocitypowered.api.proxy.Player;
+import de.jvstvshd.velocitypunishment.VelocityPunishmentPlugin;
 import de.jvstvshd.velocitypunishment.punishment.Mute;
 import de.jvstvshd.velocitypunishment.punishment.Punishment;
-import de.jvstvshd.velocitypunishment.punishment.PunishmentManager;
 import de.jvstvshd.velocitypunishment.punishment.StandardPunishmentType;
 import de.jvstvshd.velocitypunishment.punishment.impl.DefaultMute;
 import de.jvstvshd.velocitypunishment.util.Util;
+import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.format.NamedTextColor;
 
 import java.util.HashMap;
 import java.util.List;
@@ -23,12 +25,12 @@ import java.util.concurrent.TimeoutException;
 public class ChatListener {
 
     private final Map<UUID, MuteContainer> mutes;
-    private final PunishmentManager punishmentManager;
     private final ExecutorService service;
+    private final VelocityPunishmentPlugin plugin;
 
-    public ChatListener(PunishmentManager punishmentManager, ExecutorService service) {
-        this.punishmentManager = punishmentManager;
-        this.service = service;
+    public ChatListener(VelocityPunishmentPlugin plugin) {
+        this.plugin = plugin;
+        this.service = plugin.getService();
         mutes = new HashMap<>();
     }
 
@@ -41,9 +43,14 @@ public class ChatListener {
                 return;
             }
             event.setResult(PlayerChatEvent.ChatResult.denied());
-            event.getPlayer().sendMessage(container.getMute().createFullReason());
+            event.getPlayer().sendMessage(Component.text("Please wait a moment").color(NamedTextColor.RED));
         } else {
-            update(player.getUniqueId());
+            try {
+                update(player.getUniqueId());
+            } catch (ExecutionException | InterruptedException | TimeoutException e) {
+                e.printStackTrace();
+                event.getPlayer().sendMessage(Util.INTERNAL_ERROR);
+            }
             onChat(event);
         }
     }
@@ -53,18 +60,14 @@ public class ChatListener {
         mutes.remove(event.getPlayer().getUniqueId());
     }
 
-    public void update(UUID uuid) {
-        try {
-            List<Punishment> punishments = punishmentManager.getPunishments(uuid,
-                    service, StandardPunishmentType.MUTE, StandardPunishmentType.PERMANENT_MUTE).get(5, TimeUnit.SECONDS);
-            if (!punishments.isEmpty()) {
-                Mute mute = Util.getLongestPunishment(Util.convert(punishments));
-                mutes.put(uuid, new MuteContainer().setMute(mute));
-            } else {
-                mutes.put(uuid, new MuteContainer());
-            }
-        } catch (InterruptedException | TimeoutException | ExecutionException e) {
-            e.printStackTrace();
+    public void update(UUID uuid) throws ExecutionException, InterruptedException, TimeoutException {
+        List<Punishment> punishments = plugin.getPunishmentManager().getPunishments(uuid,
+                service, StandardPunishmentType.MUTE, StandardPunishmentType.PERMANENT_MUTE).get(5, TimeUnit.SECONDS);
+        if (!punishments.isEmpty()) {
+            Mute mute = Util.getLongestPunishment(Util.convert(punishments));
+            mutes.put(uuid, new MuteContainer().setMute(mute));
+        } else {
+            mutes.put(uuid, new MuteContainer());
         }
     }
 

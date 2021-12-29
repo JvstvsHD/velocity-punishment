@@ -4,11 +4,10 @@ import com.google.common.collect.ImmutableList;
 import com.velocitypowered.api.command.CommandSource;
 import com.velocitypowered.api.command.SimpleCommand;
 import com.velocitypowered.api.proxy.ProxyServer;
+import de.jvstvshd.velocitypunishment.VelocityPunishmentPlugin;
 import de.jvstvshd.velocitypunishment.punishment.Mute;
 import de.jvstvshd.velocitypunishment.punishment.PunishmentDuration;
 import de.jvstvshd.velocitypunishment.punishment.PunishmentHelper;
-import de.jvstvshd.velocitypunishment.punishment.PunishmentManager;
-import de.jvstvshd.velocitypunishment.util.PlayerResolver;
 import de.jvstvshd.velocitypunishment.util.Util;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.TextComponent;
@@ -18,25 +17,23 @@ import net.kyori.adventure.text.format.TextDecoration;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.Optional;
-import java.util.UUID;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.stream.Collectors;
 
+import static de.jvstvshd.velocitypunishment.util.Util.INTERNAL_ERROR;
 import static de.jvstvshd.velocitypunishment.util.Util.copyComponent;
 
 public class TempmuteCommand implements SimpleCommand {
 
-    private final PunishmentManager punishmentManager;
     private final ProxyServer proxyServer;
     private final ExecutorService service;
-    private final PlayerResolver playerResolver;
+    private final VelocityPunishmentPlugin plugin;
 
-    public TempmuteCommand(PunishmentManager punishmentManager, ProxyServer proxyServer, ExecutorService service, PlayerResolver playerResolver) {
-        this.punishmentManager = punishmentManager;
-        this.proxyServer = proxyServer;
-        this.service = service;
-        this.playerResolver = playerResolver;
+    public TempmuteCommand(VelocityPunishmentPlugin plugin) {
+        this.proxyServer = plugin.getServer();
+        this.service = plugin.getService();
+        this.plugin = plugin;
     }
 
     @Override
@@ -46,15 +43,17 @@ public class TempmuteCommand implements SimpleCommand {
             source.sendMessage(Component.text("Please use /tempmute <player> <duration> [reason]").color(NamedTextColor.DARK_RED));
             return;
         }
-        service.execute(() -> {
-            PunishmentHelper parser = new PunishmentHelper();
-            Optional<UUID> optionalUUID = parser.parseUuid(playerResolver, invocation);
-            UUID uuid;
-            if (optionalUUID.isEmpty()) {
+        PunishmentHelper parser = new PunishmentHelper();
+        plugin.getPlayerResolver().getOrQueryPlayerUuid(invocation.arguments()[0], service).whenCompleteAsync((uuid, throwable) -> {
+            if (throwable != null) {
+                source.sendMessage(INTERNAL_ERROR);
+                throwable.printStackTrace();
+                return;
+            }
+            if (uuid == null) {
                 source.sendMessage(Component.text(invocation.arguments()[0] + " could not be found."));
                 return;
             }
-            uuid = optionalUUID.get();
             Optional<PunishmentDuration> optDuration = parser.parseDuration(1, invocation);
             if (optDuration.isEmpty()) {
                 return;
@@ -63,7 +62,7 @@ public class TempmuteCommand implements SimpleCommand {
             TextComponent component = parser.parseComponent(2, invocation);
             Mute mute;
             try {
-                mute = punishmentManager.createMute(uuid, component, duration);
+                mute = plugin.getPunishmentManager().createMute(uuid, component, duration);
                 mute.punish().get();
             } catch (InterruptedException | ExecutionException e) {
                 invocation.source().sendMessage(Util.INTERNAL_ERROR);
@@ -82,7 +81,7 @@ public class TempmuteCommand implements SimpleCommand {
                             Component.text(until).color(NamedTextColor.GREEN),
                             Component.text(".").color(NamedTextColor.RED))));
             source.sendMessage(Component.text("Punishment id: " + mute.getPunishmentUuid().toString().toLowerCase()).color(NamedTextColor.YELLOW));
-        });
+        }, service);
     }
 
     @Override

@@ -3,12 +3,10 @@ package de.jvstvshd.velocitypunishment.commands;
 import com.google.common.collect.ImmutableList;
 import com.velocitypowered.api.command.CommandSource;
 import com.velocitypowered.api.command.SimpleCommand;
-import com.velocitypowered.api.proxy.ProxyServer;
+import de.jvstvshd.velocitypunishment.VelocityPunishmentPlugin;
 import de.jvstvshd.velocitypunishment.listener.ChatListener;
 import de.jvstvshd.velocitypunishment.punishment.Mute;
 import de.jvstvshd.velocitypunishment.punishment.PunishmentHelper;
-import de.jvstvshd.velocitypunishment.punishment.PunishmentManager;
-import de.jvstvshd.velocitypunishment.util.PlayerResolver;
 import de.jvstvshd.velocitypunishment.util.Util;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.TextComponent;
@@ -16,30 +14,22 @@ import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.format.TextDecoration;
 
 import java.util.List;
-import java.util.Optional;
-import java.util.UUID;
 import java.util.concurrent.ExecutionException;
-import java.util.concurrent.ExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.stream.Collectors;
 
+import static de.jvstvshd.velocitypunishment.util.Util.INTERNAL_ERROR;
 import static de.jvstvshd.velocitypunishment.util.Util.copyComponent;
 
 public class MuteCommand implements SimpleCommand {
 
-    private final PunishmentManager punishmentManager;
-    private final ProxyServer server;
+    private final VelocityPunishmentPlugin plugin;
     private final ChatListener chatListener;
-    private final ExecutorService service;
-    private final PlayerResolver playerResolver;
 
-    public MuteCommand(PunishmentManager punishmentManager, ProxyServer server, ChatListener chatListener, ExecutorService service, PlayerResolver playerResolver) {
-        this.punishmentManager = punishmentManager;
-        this.server = server;
+    public MuteCommand(VelocityPunishmentPlugin plugin, ChatListener chatListener) {
+        this.plugin = plugin;
         this.chatListener = chatListener;
-        this.service = service;
-        this.playerResolver = playerResolver;
     }
 
     @Override
@@ -49,15 +39,19 @@ public class MuteCommand implements SimpleCommand {
             source.sendMessage(Component.text("Please user /mute <player> [reason]").color(NamedTextColor.DARK_RED));
             return;
         }
-        service.execute(() -> {
-            PunishmentHelper parser = new PunishmentHelper();
-            Optional<UUID> optionalUUID = parser.parseUuid(playerResolver, invocation);
-            UUID uuid;
-            if (optionalUUID.isEmpty()) {
+        var playerResolver = plugin.getPlayerResolver();
+        var punishmentManager = plugin.getPunishmentManager();
+        PunishmentHelper parser = new PunishmentHelper();
+        playerResolver.getOrQueryPlayerUuid(invocation.arguments()[0], plugin.getService()).whenCompleteAsync((uuid, throwable) -> {
+            if (throwable != null) {
+                source.sendMessage(INTERNAL_ERROR);
+                throwable.printStackTrace();
+                return;
+            }
+            if (uuid == null) {
                 source.sendMessage(Component.text(invocation.arguments()[0] + " could not be found."));
                 return;
             }
-            uuid = optionalUUID.get();
             TextComponent reason = parser.parseComponent(1, invocation);
 
             Mute mute;
@@ -81,15 +75,16 @@ public class MuteCommand implements SimpleCommand {
             ).build();
             source.sendMessage(component);
             source.sendMessage(Component.text("Punishment id: " + mute.getPunishmentUuid().toString().toLowerCase()).color(NamedTextColor.YELLOW));
-            if (server.getPlayer(uuid).isPresent()) {
+            if (plugin.getServer().getPlayer(uuid).isPresent()) {
                 chatListener.getMutes().put(uuid, new ChatListener.MuteContainer().setMute(mute));
             }
-        });
+        }, plugin.getService());
     }
 
     @Override
     public List<String> suggest(Invocation invocation) {
         String[] args = invocation.arguments();
+        var server = plugin.getServer();
         if (args.length == 0) {
             return Util.getPlayerNames(server.getAllPlayers());
         }

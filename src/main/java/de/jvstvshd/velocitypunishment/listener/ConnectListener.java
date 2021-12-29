@@ -50,7 +50,7 @@ public record ConnectListener(PunishmentManager punishmentManager,
             Component deny = ban.createFullReason();
             event.setResult(ResultedEvent.ComponentResult.denied(deny));
         } else {
-            service.execute(() -> ban.cancel().whenCompleteAsync((unused, throwable) -> {
+            ban.cancel().whenCompleteAsync((unused, throwable) -> {
                 if (throwable != null) {
                     throwable.printStackTrace();
                     return;
@@ -60,7 +60,7 @@ public record ConnectListener(PunishmentManager punishmentManager,
                                 Component.text("'" + ban.getPunishmentUuid().toString().toLowerCase() + "'")
                                         .color(NamedTextColor.YELLOW),
                                 Component.text("was annulled.").color(NamedTextColor.GREEN)));
-            }));
+            }, service);
         }
     }
 }

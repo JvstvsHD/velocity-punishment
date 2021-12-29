@@ -4,11 +4,10 @@ import com.google.common.collect.ImmutableList;
 import com.velocitypowered.api.command.CommandSource;
 import com.velocitypowered.api.command.SimpleCommand;
 import com.velocitypowered.api.proxy.ProxyServer;
+import de.jvstvshd.velocitypunishment.VelocityPunishmentPlugin;
 import de.jvstvshd.velocitypunishment.listener.ChatListener;
 import de.jvstvshd.velocitypunishment.punishment.Punishment;
 import de.jvstvshd.velocitypunishment.punishment.PunishmentHelper;
-import de.jvstvshd.velocitypunishment.punishment.PunishmentManager;
-import de.jvstvshd.velocitypunishment.util.PlayerResolver;
 import de.jvstvshd.velocitypunishment.util.Util;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.event.ClickEvent;
@@ -25,22 +24,22 @@ import java.util.*;
 import java.util.concurrent.*;
 import java.util.stream.Collectors;
 
+import static de.jvstvshd.velocitypunishment.util.Util.INTERNAL_ERROR;
+
 public class PunishmentCommand implements SimpleCommand {
 
     private final ExecutorService service;
-    private final PunishmentManager punishmentManager;
     private final DataSource dataSource;
     private final ProxyServer server;
     private final ChatListener chatListener;
-    private final PlayerResolver playerResolver;
+    private final VelocityPunishmentPlugin plugin;
 
-    public PunishmentCommand(ExecutorService service, PunishmentManager punishmentManager, DataSource dataSource, ProxyServer server, ChatListener chatListener, PlayerResolver playerResolver) {
-        this.service = service;
-        this.punishmentManager = punishmentManager;
-        this.dataSource = dataSource;
-        this.server = server;
+    public PunishmentCommand(VelocityPunishmentPlugin plugin, ChatListener chatListener) {
+        this.service = plugin.getService();
+        this.dataSource = plugin.getDataSource();
+        this.server = plugin.getServer();
         this.chatListener = chatListener;
-        this.playerResolver = playerResolver;
+        this.plugin = plugin;
     }
 
     private final static List<String> options = ImmutableList.of("annul", "remove", "info", "change");
@@ -53,18 +52,23 @@ public class PunishmentCommand implements SimpleCommand {
             source.sendMessage(Component.text("Please use /punishment <playerinfo> <player> or <punishment id> <annul|info|change|info|remove>").color(NamedTextColor.DARK_RED));
             return;
         }
+        var punishmentManager = plugin.getPunishmentManager();
         if (arguments[0].equalsIgnoreCase("playerinfo")) {
-            service.execute(() -> {
-                PunishmentHelper helper = new PunishmentHelper();
-                UUID playerUuid = helper.getPlayerUuid(1, service, playerResolver, invocation);
-                if (playerUuid == null) {
+            var playerResolver = plugin.getPlayerResolver();
+            PunishmentHelper helper = new PunishmentHelper();
+            helper.getPlayerUuid(1, service, playerResolver, invocation).whenCompleteAsync((uuid, throwable) -> {
+                if (throwable != null) {
+                    source.sendMessage(INTERNAL_ERROR);
+                    throwable.printStackTrace();
+                    return;
+                }
+                if (uuid == null) {
                     invocation.source().sendMessage(Component.text("This player is not banned at the moment.").color(NamedTextColor.RED));
                     return;
                 }
-
                 List<Punishment> punishments;
                 try {
-                    punishments = punishmentManager.getPunishments(playerUuid, service).get(10, TimeUnit.SECONDS);
+                    punishments = punishmentManager.getPunishments(uuid, service).get(10, TimeUnit.SECONDS);
                 } catch (InterruptedException | TimeoutException | ExecutionException e) {
                     e.printStackTrace();
                     source.sendMessage(Util.INTERNAL_ERROR);
@@ -79,7 +83,7 @@ public class PunishmentCommand implements SimpleCommand {
                                     .color(NamedTextColor.GREEN)));
                     source.sendMessage(component);
                 }
-            });
+            }, service);
             return;
         }
         UUID uuid;
@@ -120,7 +124,12 @@ public class PunishmentCommand implements SimpleCommand {
                         return;
                     }
                     source.sendMessage(Component.text("The punishment was successfully annulled.").color(NamedTextColor.GREEN));
-                    chatListener.update(uuid);
+                    try {
+                        chatListener.update(uuid);
+                    } catch (ExecutionException | InterruptedException | TimeoutException e) {
+                        source.sendMessage(INTERNAL_ERROR);
+                        e.printStackTrace();
+                    }
                 });
                 case "info" -> source.sendMessage(new PunishmentHelper().buildPunishmentData(punishment));
                 case "change" -> source.sendMessage(Component.text("Soon™️"));
@@ -145,7 +154,7 @@ public class PunishmentCommand implements SimpleCommand {
                 } catch (SQLException e) {
                     e.printStackTrace();
                 }
-                list.addAll(Util.getPlayerNames(server.getAllPlayers()).stream().map(String::toLowerCase).collect(Collectors.toList()));
+                list.addAll(Util.getPlayerNames(server.getAllPlayers()).stream().map(String::toLowerCase).toList());
                 return ImmutableList.copyOf(list);
             }, service);
         }

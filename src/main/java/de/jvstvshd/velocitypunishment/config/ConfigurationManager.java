@@ -11,7 +11,7 @@ public class ConfigurationManager {
 
     private final Path path;
     private final ObjectMapper objectMapper;
-    private Configuration configuration;
+    private ConfigData configData;
 
     public ConfigurationManager(Path path) {
         this.path = path;
@@ -29,7 +29,7 @@ public class ConfigurationManager {
         }
         try (FileChannel channel = FileChannel.open(path)) {
             if (channel.size() <= 0 || write) {
-                objectMapper.writerWithDefaultPrettyPrinter().writeValues(path.toFile()).write(new Configuration());
+                objectMapper.writerWithDefaultPrettyPrinter().writeValues(path.toFile()).write(new ConfigData());
             }
         }
 
@@ -37,14 +37,14 @@ public class ConfigurationManager {
 
     public void load() throws IOException {
         create();
-        configuration = objectMapper.readValue(path.toFile(), Configuration.class);
+        configData = objectMapper.readValue(path.toFile(), ConfigData.class);
     }
 
     public void save() throws IOException {
-        objectMapper.writerWithDefaultPrettyPrinter().writeValues(path.toFile()).write(configuration);
+        objectMapper.writerWithDefaultPrettyPrinter().writeValues(path.toFile()).write(configData);
     }
 
-    public Configuration getConfiguration() {
-        return configuration;
+    public ConfigData getConfiguration() {
+        return configData;
     }
 }

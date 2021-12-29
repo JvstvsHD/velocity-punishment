@@ -14,7 +14,6 @@ import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.util.stream.Collectors;
 
 import static de.jvstvshd.velocitypunishment.util.Util.executeAsync;
 
@@ -48,7 +47,7 @@ public class DefaultPunishmentManager implements PunishmentManager {
     @Override
     public CompletableFuture<List<Punishment>> getPunishments(UUID player, ExecutorService service, PunishmentType... types) {
         return executeAsync(() -> {
-            List<StandardPunishmentType> typeList = types.length == 0 ? Arrays.stream(StandardPunishmentType.values()).collect(Collectors.toList()) : getTypes(types);
+            List<StandardPunishmentType> typeList = types.length == 0 ? Arrays.stream(StandardPunishmentType.values()).toList() : getTypes(types);
             List<Punishment> punishments = new ArrayList<>();
             for (StandardPunishmentType standardPunishmentType : typeList) {
                 try (Connection connection = dataSource.getConnection();

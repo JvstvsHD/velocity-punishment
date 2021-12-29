@@ -14,6 +14,8 @@ import de.jvstvshd.velocitypunishment.commands.*;
 import de.jvstvshd.velocitypunishment.config.ConfigurationManager;
 import de.jvstvshd.velocitypunishment.listener.ChatListener;
 import de.jvstvshd.velocitypunishment.listener.ConnectListener;
+import de.jvstvshd.velocitypunishment.message.MessageProvider;
+import de.jvstvshd.velocitypunishment.message.ResourceBundleMessageProvider;
 import de.jvstvshd.velocitypunishment.punishment.PunishmentManager;
 import de.jvstvshd.velocitypunishment.punishment.impl.DefaultPlayerResolver;
 import de.jvstvshd.velocitypunishment.punishment.impl.DefaultPunishmentManager;
@@ -36,9 +38,11 @@ public class VelocityPunishmentPlugin {
     private final ProxyServer server;
     private final Logger logger;
     private final ConfigurationManager configurationManager;
+    private final ExecutorService service = Executors.newCachedThreadPool();
     private PunishmentManager punishmentManager;
     private HikariDataSource dataSource;
-    private final PlayerResolver playerResolver;
+    private PlayerResolver playerResolver;
+    private MessageProvider messageProvider;
 
     @Inject
     public VelocityPunishmentPlugin(ProxyServer server, Logger logger, @DataDirectory Path dataDirectory) {
@@ -52,6 +56,7 @@ public class VelocityPunishmentPlugin {
     public void onProxyInitialization(ProxyInitializeEvent event) {
         try {
             configurationManager.load();
+            this.messageProvider = new ResourceBundleMessageProvider(configurationManager.getConfiguration());
         } catch (IOException e) {
             logger.error("Could not load configuration", e);
         }
@@ -66,19 +71,18 @@ public class VelocityPunishmentPlugin {
     }
 
     private void setup(CommandManager commandManager, EventManager eventManager) {
-        ExecutorService service = Executors.newCachedThreadPool();
-        ChatListener chatListener = new ChatListener(punishmentManager, service);
+        ChatListener chatListener = new ChatListener(this);
 
         eventManager.register(this, new ConnectListener(punishmentManager, Executors.newCachedThreadPool(), server, chatListener));
         eventManager.register(this, chatListener);
 
-        commandManager.register(commandManager.metaBuilder("ban").build(), new BanCommand(server, punishmentManager, playerResolver));
-        commandManager.register(commandManager.metaBuilder("tempban").build(), new TempbanCommand(punishmentManager, server, service, playerResolver));
-        commandManager.register(commandManager.metaBuilder("unban").build(), new UnbanCommand(punishmentManager, dataSource, service, playerResolver));
-        commandManager.register(commandManager.metaBuilder("punishment").build(), new PunishmentCommand(service, punishmentManager, dataSource, server, chatListener, playerResolver));
-        commandManager.register(commandManager.metaBuilder("mute").build(), new MuteCommand(punishmentManager, server, chatListener, service, playerResolver));
-        commandManager.register(commandManager.metaBuilder("tempmute").build(), new TempmuteCommand(punishmentManager, server, service, playerResolver));
-        commandManager.register(commandManager.metaBuilder("unmute").build(), new UnmuteCommand(punishmentManager, dataSource, service, chatListener, playerResolver));
+        commandManager.register(commandManager.metaBuilder("ban").build(), new BanCommand(this));
+        commandManager.register(commandManager.metaBuilder("tempban").build(), new TempbanCommand(this));
+        commandManager.register(commandManager.metaBuilder("unban").build(), new UnbanCommand(this));
+        commandManager.register(commandManager.metaBuilder("punishment").build(), new PunishmentCommand(this, chatListener));
+        commandManager.register(commandManager.metaBuilder("mute").build(), new MuteCommand(this, chatListener));
+        commandManager.register(commandManager.metaBuilder("tempmute").build(), new TempmuteCommand(this));
+        commandManager.register(commandManager.metaBuilder("unmute").build(), new UnmuteCommand(this, chatListener));
     }
 
     public PunishmentManager getPunishmentManager() {
@@ -105,5 +109,37 @@ public class VelocityPunishmentPlugin {
                         "reason VARCHAR (1000), punishment_id VARCHAR (36))")) {
             statement.execute();
         }
+    }
+
+    public void setPunishmentManager(PunishmentManager punishmentManager) {
+        this.punishmentManager = punishmentManager;
+    }
+
+    public void setPlayerResolver(PlayerResolver playerResolver) {
+        this.playerResolver = playerResolver;
+    }
+
+    public void setMessageProvider(MessageProvider messageProvider) {
+        this.messageProvider = messageProvider;
+    }
+
+    public PlayerResolver getPlayerResolver() {
+        return playerResolver;
+    }
+
+    public ProxyServer getServer() {
+        return server;
+    }
+
+    public ExecutorService getService() {
+        return service;
+    }
+
+    public HikariDataSource getDataSource() {
+        return dataSource;
+    }
+
+    public MessageProvider getMessageProvider() {
+        return messageProvider;
     }
 }

@@ -50,6 +50,7 @@ public class DefaultBan extends AbstractTemporalPunishment implements Ban {
                 statement.setTimestamp(4, getDuration().timestampExpiration());
                 statement.setString(5, convertReason(getReason()));
                 statement.setString(6, Util.trimUuid(getPunishmentUuid()));
+                statement.executeUpdate();
                 return null;
             }
         }, getService());
@@ -61,6 +62,7 @@ public class DefaultBan extends AbstractTemporalPunishment implements Ban {
             try (Connection connection = getDataSource().getConnection();
                  PreparedStatement statement = connection.prepareStatement(APPLY_ANNUL)) {
                 statement.setString(1, Util.trimUuid(getPunishmentUuid()));
+                statement.executeUpdate();
                 return null;
             }
         }, getService());
@@ -76,6 +78,7 @@ public class DefaultBan extends AbstractTemporalPunishment implements Ban {
                 statement.setTimestamp(2, Timestamp.valueOf(newDuration.expiration()));
                 statement.setBoolean(3, newDuration.isPermanent());
                 statement.setString(4, Util.trimUuid(getPunishmentUuid()));
+                statement.executeUpdate();
             }
             return new DefaultBan(getPlayerUuid(), newReason, getDataSource(), getPlayerResolver(), getPunishmentManager(), getService(), newDuration);
         }, getService());

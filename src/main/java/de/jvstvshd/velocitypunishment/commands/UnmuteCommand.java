@@ -2,13 +2,11 @@ package de.jvstvshd.velocitypunishment.commands;
 
 import com.google.common.collect.ImmutableList;
 import com.velocitypowered.api.command.SimpleCommand;
-import com.zaxxer.hikari.HikariDataSource;
+import de.jvstvshd.velocitypunishment.VelocityPunishmentPlugin;
 import de.jvstvshd.velocitypunishment.listener.ChatListener;
 import de.jvstvshd.velocitypunishment.punishment.Punishment;
 import de.jvstvshd.velocitypunishment.punishment.PunishmentHelper;
-import de.jvstvshd.velocitypunishment.punishment.PunishmentManager;
 import de.jvstvshd.velocitypunishment.punishment.StandardPunishmentType;
-import de.jvstvshd.velocitypunishment.util.PlayerResolver;
 import de.jvstvshd.velocitypunishment.util.Util;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.event.ClickEvent;
@@ -24,23 +22,22 @@ import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
-import java.util.UUID;
 import java.util.concurrent.*;
+
+import static de.jvstvshd.velocitypunishment.util.Util.INTERNAL_ERROR;
 
 public class UnmuteCommand implements SimpleCommand {
 
     private final ExecutorService service;
-    private final PunishmentManager manager;
     private final DataSource dataSource;
+    private final VelocityPunishmentPlugin plugin;
     private final ChatListener chatListener;
-    private final PlayerResolver playerResolver;
 
-    public UnmuteCommand(PunishmentManager punishmentManager, HikariDataSource dataSource, ExecutorService service, ChatListener chatListener, PlayerResolver playerResolver) {
-        this.manager = punishmentManager;
-        this.dataSource = dataSource;
-        this.service = service;
+    public UnmuteCommand(VelocityPunishmentPlugin plugin, ChatListener chatListener) {
+        this.dataSource = plugin.getDataSource();
+        this.service = plugin.getService();
+        this.plugin = plugin;
         this.chatListener = chatListener;
-        this.playerResolver = playerResolver;
     }
 
     @Override
@@ -49,16 +46,21 @@ public class UnmuteCommand implements SimpleCommand {
             invocation.source().sendMessage(Component.text("Please use /unmute <player>").color(NamedTextColor.DARK_RED));
             return;
         }
-        service.execute(() -> {
-            PunishmentHelper helper = new PunishmentHelper();
-            UUID playerUuid = helper.getPlayerUuid(0, service, playerResolver, invocation);
-            if (playerUuid == null) {
-                invocation.source().sendMessage(Component.text("This player is not muted at the moment.").color(NamedTextColor.RED));
+        var source = invocation.source();
+        PunishmentHelper helper = new PunishmentHelper();
+        helper.getPlayerUuid(0, service, plugin.getPlayerResolver(), invocation).whenCompleteAsync((uuid, throwable) -> {
+            if (throwable != null) {
+                source.sendMessage(INTERNAL_ERROR);
+                throwable.printStackTrace();
+                return;
+            }
+            if (uuid == null) {
+                source.sendMessage(Component.text(invocation.arguments()[0] + " could not be found."));
                 return;
             }
             List<Punishment> punishments;
             try {
-                punishments = manager.getPunishments(playerUuid, service, StandardPunishmentType.MUTE, StandardPunishmentType.PERMANENT_MUTE).get(5, TimeUnit.SECONDS);
+                punishments = plugin.getPunishmentManager().getPunishments(uuid, service, StandardPunishmentType.MUTE, StandardPunishmentType.PERMANENT_MUTE).get(5, TimeUnit.SECONDS);
             } catch (InterruptedException | ExecutionException | TimeoutException e) {
                 e.printStackTrace();
                 invocation.source().sendMessage(Util.INTERNAL_ERROR);
@@ -75,17 +77,22 @@ public class UnmuteCommand implements SimpleCommand {
                 }
             } else {
                 Punishment punishment = punishments.get(0);
-                punishment.cancel().whenCompleteAsync((unused, throwable) -> {
-                    if (throwable != null) {
-                        throwable.printStackTrace();
+                punishment.cancel().whenCompleteAsync((unused, t) -> {
+                    if (t != null) {
+                        t.printStackTrace();
                         invocation.source().sendMessage(Util.INTERNAL_ERROR);
                         return;
                     }
                     invocation.source().sendMessage(Component.text("The ban was annulled.").color(NamedTextColor.GREEN));
-                    chatListener.update(playerUuid);
+                    try {
+                        chatListener.update(uuid);
+                    } catch (ExecutionException | InterruptedException | TimeoutException e) {
+                        source.sendMessage(INTERNAL_ERROR);
+                        e.printStackTrace();
+                    }
                 });
             }
-        });
+        }, service);
     }
 
     @Override
