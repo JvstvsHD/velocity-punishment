@@ -1,6 +1,8 @@
 package de.jvstvshd.velocitypunishment.punishment;
 
+import com.velocitypowered.api.command.CommandSource;
 import com.velocitypowered.api.command.SimpleCommand;
+import de.jvstvshd.velocitypunishment.message.MessageProvider;
 import de.jvstvshd.velocitypunishment.util.PlayerResolver;
 import de.jvstvshd.velocitypunishment.util.Util;
 import net.kyori.adventure.text.Component;
@@ -15,31 +17,31 @@ import java.util.concurrent.ExecutorService;
 
 public class PunishmentHelper {
 
-    public Component buildPunishmentData(Punishment punishment) {
+    public Component buildPunishmentData(Punishment punishment, MessageProvider provider, CommandSource source) {
         return Component.text()
-                .append(Component.text("Type: ").color(NamedTextColor.AQUA),
+                .append(provider.provide("helper.type", source, true).color(NamedTextColor.AQUA),
                         Component.text(punishment.getType().getName()).color(NamedTextColor.YELLOW),
                         Component.newline(),
-                        Component.text("reason: ").color(NamedTextColor.AQUA),
+                        provider.provide("helper.reason", source, true).color(NamedTextColor.AQUA),
                         punishment.getReason(),
                         Component.newline(),
                         punishment instanceof TemporalPunishment temporalPunishment ?
-                                buildPunishmentDataTemporal(temporalPunishment) : Component.text(""),
+                                buildPunishmentDataTemporal(temporalPunishment, provider, source) : Component.text(""),
                         Component.newline()
                 )
                 .build();
     }
 
-    public Component buildPunishmentDataTemporal(TemporalPunishment punishment) {
+    public Component buildPunishmentDataTemporal(TemporalPunishment punishment, MessageProvider provider, CommandSource source) {
         return punishment.isPermanent() ? Component.text("permanent").color(NamedTextColor.RED) : Component.text()
-                .append(Component.text("duration: ").color(NamedTextColor.AQUA),
+                .append(provider.provide("helper.temporal.duration", source, true).color(NamedTextColor.AQUA),
                         Component.text(punishment.getDuration().getRemainingDuration()).color(NamedTextColor.YELLOW),
                         Component.newline(),
-                        Component.text("end of punishment: ").color(NamedTextColor.AQUA),
-                        Component.text(punishment.getDuration().getEnd()).color(NamedTextColor.YELLOW),
-                        Component.newline(),
-                        Component.text("initial duration: ").color(NamedTextColor.AQUA),
-                        Component.text(punishment.getDuration().getInitialDuration()).color(NamedTextColor.YELLOW))
+                        provider.provide("helper.temporal.end", source, true).color(NamedTextColor.AQUA),
+                        Component.text(punishment.getDuration().getEnd()).color(NamedTextColor.YELLOW))
+                /*Component.newline(),
+                Component.text("initial duration: ").color(NamedTextColor.AQUA),
+                Component.text(punishment.getDuration().getInitialDuration()).color(NamedTextColor.YELLOW))*/
                 .build();
     }
 
@@ -56,9 +58,9 @@ public class PunishmentHelper {
         }
     }
 
-    public TextComponent parseComponent(int startIndex, SimpleCommand.Invocation invocation) {
+    public TextComponent parseComponent(int startIndex, SimpleCommand.Invocation invocation, TextComponent def) {
         if (invocation.arguments().length == startIndex) {
-            return Component.text("Ban!").color(NamedTextColor.DARK_RED);
+            return def;
         }
         StringBuilder builder = new StringBuilder();
         for (int i = startIndex; i < invocation.arguments().length; i++) {
@@ -74,11 +76,11 @@ public class PunishmentHelper {
         } else if (argument.length() <= 36) {
             try {
                 return CompletableFuture.completedFuture(Util.parseUuid(argument));
-            } catch (Exception e) {
-                return null;
+            } catch (IllegalArgumentException e) {
+                return CompletableFuture.completedFuture(null);
             }
         } else {
-            return null;
+            return CompletableFuture.completedFuture(null);
         }
     }
 }

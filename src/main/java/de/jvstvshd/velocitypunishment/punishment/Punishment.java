@@ -3,7 +3,6 @@ package de.jvstvshd.velocitypunishment.punishment;
 import net.kyori.adventure.text.Component;
 
 import java.time.LocalDateTime;
-import java.time.chrono.ChronoLocalDateTime;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 
@@ -12,9 +11,9 @@ import java.util.concurrent.CompletableFuture;
  * To punish a player, use one of the methods starting with "create" from the {@link PunishmentManager}.<br>
  * Example:<br>
  * <pre>{@code
- *     //punishment manager, for example StandardPunishmentManager
+ *     //punishment manager, for example DefaultPunishmentManager
  *     PunishmentManager punishmentManager;
- *     //the uuid of the player, for example either from Player#getUniqueId() or from PunishmentManager#getPlayerUuid(String, ExecutorService);
+ *     //the uuid of the player, for example either from Player#getUniqueId() or from PlayerResolver#getOrQueryPlayerUuid(String, Executor)
  *     UUID playerUuid;
  *     //parse the duration of the punishment from a string in the format [number, ranging from 0 to Long.MAX_VALUE] and one char for s[econd], m[inute], h[our], d[ay].
  *     PunishmentDuration duration = PunishmentDuration.parse("1d");
@@ -30,37 +29,38 @@ public interface Punishment extends ReasonHolder {
 
     /**
      * Determines whether the expiration of this punishment is after {@link LocalDateTime#now()} or not.
-     * @return true, if {@link java.time.LocalDateTime#isAfter(ChronoLocalDateTime)} returns true, otherwise false
+     *
+     * @return true, if the expiration date is after now, otherwise false
      */
     boolean isOngoing();
 
     /**
      * Punishes the player finally.
      *
-     * @return true, if the action was successfully or false if not wrapped in a {@link CompletableFuture}.
+     * @return a {@link CompletableFuture} containing the exerted punishment
      */
-    CompletableFuture<Void> punish();
+    CompletableFuture<Punishment> punish();
 
     /**
-     * Annuls this punishment.
+     * Cancels this punishment thus allowing the player e.g. to join the server
      *
-     * @return true, if the action was successfully or false if not wrapped in a {@link CompletableFuture}.
-     * @throws UnsupportedOperationException if this action is not supported (example: {@link Kick#cancel()})
+     * @return a {@link CompletableFuture} containing the cancelled punishment
      */
-    CompletableFuture<Void> cancel();
+    CompletableFuture<Punishment> cancel();
 
     /**
      * Changes the duration and reason of this punishment. This method can be used if a player created an appeal an it was accepted.
+     *
      * @param newDuration the new duration of this punishment
-     * @param newReason the new reason which should be displayed to the player
-     * @return the new created punishment
-     * @throws UnsupportedOperationException if this action is not supported (example: {@link Kick#change(PunishmentDuration, Component)})
+     * @param newReason   the new reason which should be displayed to the player
+     * @return a {@link CompletableFuture} containing the new punishment
+     * @see #cancel()
      */
     CompletableFuture<Punishment> change(PunishmentDuration newDuration, Component newReason);
 
     /**
      * Returns the type of this punishment. By default, this is a field from {@link StandardPunishmentType}.
-     * @return the type from this punishment
+     * @return the type of this punishment
      * @see StandardPunishmentType
      */
     PunishmentType getType();

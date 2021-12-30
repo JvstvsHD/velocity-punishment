@@ -14,7 +14,7 @@ import net.kyori.adventure.text.format.NamedTextColor;
 import java.util.*;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executor;
 import java.util.function.BiConsumer;
 import java.util.function.BinaryOperator;
 import java.util.function.Function;
@@ -24,6 +24,7 @@ import java.util.stream.Collectors;
 
 public class Util {
 
+    @Deprecated(forRemoval = true, since = "1.0.0-beta.2")
     public static final TextComponent INTERNAL_ERROR =
             Component.text("An internal error occurred. Please contact the network administrator.")
                     .color(NamedTextColor.DARK_RED);
@@ -81,7 +82,7 @@ public class Util {
                 .hoverEvent((HoverEventSource<Component>) op -> HoverEvent.showText(Component.text("Copy to clipboard").color(NamedTextColor.GREEN)));
     }
 
-    public static <T> CompletableFuture<T> executeAsync(Callable<T> task, ExecutorService service) {
+    public static <T> CompletableFuture<T> executeAsync(Callable<T> task, Executor service) {
         CompletableFuture<T> cf = new CompletableFuture<>();
         service.execute(() -> {
             try {

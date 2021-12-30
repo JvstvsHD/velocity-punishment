@@ -2,25 +2,32 @@ package de.jvstvshd.velocitypunishment.punishment;
 
 import com.velocitypowered.api.proxy.Player;
 import com.velocitypowered.api.proxy.ProxyServer;
+import de.jvstvshd.velocitypunishment.punishment.impl.DefaultPunishmentManager;
+import de.jvstvshd.velocitypunishment.util.PlayerResolver;
 import net.kyori.adventure.text.Component;
 
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executor;
 
+/**
+ * An interface for managing punishments.
+ *
+ * @see Punishment
+ * @see DefaultPunishmentManager
+ */
 public interface PunishmentManager {
 
     /**
      * Prepares a ban for a player with custom reason and duration.
      *
      * @param player   the uuid of the player which should be banned (by either {@link Player#getUniqueId()} ()} or {@link de.jvstvshd.velocitypunishment.util.PlayerResolver#getPlayerUuid(String)}.
-     * @param reason   the reason given as a {@link Component}. This component will be serialized as Json with a {@link net.kyori.adventure.text.serializer.gson.GsonComponentSerializer}
-     *                 for storing it in the database.
+     * @param reason   the reason given as a {@link Component}.
      * @param duration the duration, which can be created via {@link PunishmentDuration#parse(String)} when it's source is from minecraft commands.
      * @return the prepared ban with the given reason and duration. This duration remains the same at any duration since it is only added when the player is banned.
-     * Only {@link Ban#punish()} ()} is needed to execute the punishment.
+     * Only {@link Ban#punish()} is needed to execute the punishment.
      */
     Ban createBan(UUID player, Component reason, PunishmentDuration duration);
 
@@ -29,8 +36,7 @@ public interface PunishmentManager {
      * is {@link PunishmentDuration#permanent()}.
      *
      * @param player the uuid of the player which should be banned (by either {@link Player#getUniqueId()} ()} or {@link de.jvstvshd.velocitypunishment.util.PlayerResolver#getPlayerUuid(String)}.
-     * @param reason the reason given as a {@link Component}. This component will be serialized as Json with a {@link net.kyori.adventure.text.serializer.gson.GsonComponentSerializer}
-     *               for storing it in the database.
+     * @param reason the reason given as a {@link Component}.
      * @return the prepared ban with the given reason and duration. The duration is permanent, equals {@link java.time.LocalDateTime#MAX}
      * Only {@link Ban#punish()} is needed to execute the punishment.
      */
@@ -41,12 +47,11 @@ public interface PunishmentManager {
     /**
      * Prepares a mute for a player with custom reason and duration.
      *
-     * @param player   the uuid of the player which should be banned (by either {@link Player#getUniqueId()} ()} or {@link de.jvstvshd.velocitypunishment.util.PlayerResolver#getPlayerUuid(String)}.
-     * @param reason   the reason given as a {@link Component}. This component will be serialized as Json with a {@link net.kyori.adventure.text.serializer.gson.GsonComponentSerializer}
-     *                 for storing it in the database.
+     * @param player   the uuid of the player which should be banned (by either {@link Player#getUniqueId()} ()} or {@link PlayerResolver#getPlayerUuid(String)}.
+     * @param reason   the reason given as a {@link Component}.
      * @param duration the duration, which can be created via {@link PunishmentDuration#parse(String)} when it's source is from minecraft commands.
      * @return the prepared ban with the given reason and duration. This duration remains the same at any duration since it is only added when the player is banned.
-     * Only {@link Ban#punish()} is needed to execute the punishment.
+     * Only {@link Mute#punish()} is needed to execute the punishment.
      */
     Mute createMute(UUID player, Component reason, PunishmentDuration duration);
 
@@ -55,8 +60,7 @@ public interface PunishmentManager {
      * is {@link PunishmentDuration#permanent()}.
      *
      * @param player the uuid of the player which should be banned (by either {@link Player#getUniqueId()} ()} or {@link de.jvstvshd.velocitypunishment.util.PlayerResolver#getPlayerUuid(String)}
-     * @param reason the reason given as a {@link Component}. This component will be serialized as Json with a {@link net.kyori.adventure.text.serializer.gson.GsonComponentSerializer}
-     *               for storing it in the database.
+     * @param reason the reason given as a {@link Component}.
      * @return the prepared ban with the given reason and duration. The duration is permanent, equals {@link java.time.LocalDateTime#MAX}
      * Only {@link Mute#punish()} is needed to execute the punishment.
      */
@@ -68,17 +72,25 @@ public interface PunishmentManager {
      * This method queries all punishments with the given {@link UUID} of a player and returns them in a list.
      *
      * @param player the player whose punishments should be queried
-     * @return the list of punishments which are running at the moment.
+     * @param <T>    the type of punishment(s), matching them in <code>type</code>
+     * @return the list of punishments which are stored at the moment. This list may contains punishments which are over.
      */
-    <T extends Punishment> CompletableFuture<List<T>> getPunishments(UUID player, ExecutorService service, PunishmentType... type);
+    <T extends Punishment> CompletableFuture<List<T>> getPunishments(UUID player, Executor service, PunishmentType... type);
 
-    <T extends Punishment> CompletableFuture<Optional<T>> getPunishment(UUID punishmentId, ExecutorService service);
+    /**
+     * Queries the punishment stored with the given {@code punishmentId}
+     *
+     * @param punishmentId the punishment id from the punishment that should be queried
+     * @param service      an {@link Executor} which will be used to perform async operations
+     * @param <T>          the type of punishment
+     * @return an {@link Optional} containing the queried punishment or {@link Optional#empty()} if it was not found
+     */
+    <T extends Punishment> CompletableFuture<Optional<T>> getPunishment(UUID punishmentId, Executor service);
 
     /**
      * @return the underlying {@link ProxyServer} of this punishment manager.
      */
     ProxyServer getServer();
 
-    CompletableFuture<Boolean> isBanned(UUID playerUuid, ExecutorService service);
-
+    CompletableFuture<Boolean> isBanned(UUID playerUuid, Executor service);
 }

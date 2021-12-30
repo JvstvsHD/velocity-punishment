@@ -14,9 +14,6 @@ import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.format.TextDecoration;
 
 import java.util.List;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
 import java.util.stream.Collectors;
 
 import static de.jvstvshd.velocitypunishment.util.Util.INTERNAL_ERROR;
@@ -36,7 +33,7 @@ public class MuteCommand implements SimpleCommand {
     public void execute(Invocation invocation) {
         CommandSource source = invocation.source();
         if (invocation.arguments().length < 1) {
-            source.sendMessage(Component.text("Please user /mute <player> [reason]").color(NamedTextColor.DARK_RED));
+            source.sendMessage(plugin.getMessageProvider().provide("command.mute.usage", source, true).color(NamedTextColor.RED));
             return;
         }
         var playerResolver = plugin.getPlayerResolver();
@@ -49,35 +46,25 @@ public class MuteCommand implements SimpleCommand {
                 return;
             }
             if (uuid == null) {
-                source.sendMessage(Component.text(invocation.arguments()[0] + " could not be found."));
+                source.sendMessage(Component.translatable().args(Component.text(invocation.arguments()[0]).color(NamedTextColor.YELLOW)).key("commands.general.not-found").color(NamedTextColor.RED));
                 return;
             }
-            TextComponent reason = parser.parseComponent(1, invocation);
-
-            Mute mute;
-            try {
-                mute = punishmentManager.createPermanentMute(uuid, reason);
-                mute.punish().get(5, TimeUnit.SECONDS);
-            } catch (InterruptedException | ExecutionException | TimeoutException e) {
-                invocation.source().sendMessage(Util.INTERNAL_ERROR);
-                e.printStackTrace();
-                return;
-            }
-            String uuidString = uuid.toString().toLowerCase();
-            Component component = Component.text().append(
-                    Component.text("You have muted the player ").color(NamedTextColor.RED),
-                    copyComponent(invocation.arguments()[0]).color(NamedTextColor.YELLOW).decorate(TextDecoration.BOLD),
-                    Component.text("/").color(NamedTextColor.RED),
-                    copyComponent(uuidString).color(NamedTextColor.RED).decorate(TextDecoration.BOLD).color(NamedTextColor.YELLOW),
-                    Component.text(" for ").color(NamedTextColor.RED),
-                    reason,
-                    Component.text(".").color(NamedTextColor.RED)
-            ).build();
-            source.sendMessage(component);
-            source.sendMessage(Component.text("Punishment id: " + mute.getPunishmentUuid().toString().toLowerCase()).color(NamedTextColor.YELLOW));
-            if (plugin.getServer().getPlayer(uuid).isPresent()) {
-                chatListener.getMutes().put(uuid, new ChatListener.MuteContainer().setMute(mute));
-            }
+            TextComponent reason = parser.parseComponent(1, invocation, Component.text("mute").color(NamedTextColor.DARK_RED));
+            punishmentManager.createPermanentMute(uuid, reason).punish().whenComplete((mute, t) -> {
+                if (t != null) {
+                    t.printStackTrace();
+                    source.sendMessage(Util.INTERNAL_ERROR);
+                } else {
+                    String uuidString = uuid.toString().toLowerCase();
+                    source.sendMessage(plugin.getMessageProvider().provide("command.mute.success", source, true, copyComponent(invocation.arguments()[0]).color(NamedTextColor.YELLOW).decorate(TextDecoration.BOLD),
+                            copyComponent(uuidString).color(NamedTextColor.YELLOW).decorate(TextDecoration.BOLD),
+                            reason).color(NamedTextColor.RED));
+                    source.sendMessage(plugin.getMessageProvider().provide("commands.general.punishment.id", source, true, Component.text(mute.getPunishmentUuid().toString().toLowerCase()).color(NamedTextColor.YELLOW)));
+                }
+                if (plugin.getServer().getPlayer(uuid).isPresent()) {
+                    chatListener.getMutes().put(uuid, new ChatListener.MuteContainer().setMute((Mute) mute));
+                }
+            });
         }, plugin.getService());
     }
 

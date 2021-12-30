@@ -22,7 +22,7 @@ public interface Kick extends Punishment {
     }
 
     @Override
-    default CompletableFuture<Void> cancel() {
+    default CompletableFuture<Punishment> cancel() {
         throw new UnsupportedOperationException("Cannot annul kick since a kick lasts only one moment");
     }
 

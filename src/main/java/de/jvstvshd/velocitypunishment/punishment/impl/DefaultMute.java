@@ -35,7 +35,7 @@ public class DefaultMute extends AbstractTemporalPunishment implements Mute {
     }
 
     @Override
-    public CompletableFuture<Void> punish() {
+    public CompletableFuture<Punishment> punish() {
         checkValidity();
         return executeAsync(() -> {
             try (Connection connection = getDataSource().getConnection();
@@ -48,20 +48,20 @@ public class DefaultMute extends AbstractTemporalPunishment implements Mute {
                 statement.setString(5, convertReason(getReason()));
                 statement.setString(6, Util.trimUuid(getPunishmentUuid()));
                 statement.executeUpdate();
-                return null;
+                return this;
             }
         }, getService());
     }
 
     @Override
-    public CompletableFuture<Void> cancel() {
+    public CompletableFuture<Punishment> cancel() {
         checkValidity();
         return executeAsync(() -> {
             try (Connection connection = getDataSource().getConnection();
                  PreparedStatement statement = connection.prepareStatement(APPLY_ANNUL)) {
                 statement.setString(1, Util.trimUuid(getPunishmentUuid()));
                 statement.executeUpdate();
-                return null;
+                return this;
             }
         }, getService());
     }

@@ -37,7 +37,7 @@ public class DefaultBan extends AbstractTemporalPunishment implements Ban {
     }
 
     @Override
-    public CompletableFuture<Void> punish() {
+    public CompletableFuture<Punishment> punish() {
         checkValidity();
         return executeAsync(() -> {
             tryKick();
@@ -51,19 +51,19 @@ public class DefaultBan extends AbstractTemporalPunishment implements Ban {
                 statement.setString(5, convertReason(getReason()));
                 statement.setString(6, Util.trimUuid(getPunishmentUuid()));
                 statement.executeUpdate();
-                return null;
+                return this;
             }
         }, getService());
     }
 
     @Override
-    public CompletableFuture<Void> cancel() {
+    public CompletableFuture<Punishment> cancel() {
         return executeAsync(() -> {
             try (Connection connection = getDataSource().getConnection();
                  PreparedStatement statement = connection.prepareStatement(APPLY_ANNUL)) {
                 statement.setString(1, Util.trimUuid(getPunishmentUuid()));
                 statement.executeUpdate();
-                return null;
+                return this;
             }
         }, getService());
     }

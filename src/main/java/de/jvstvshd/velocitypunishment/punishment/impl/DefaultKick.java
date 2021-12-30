@@ -1,10 +1,7 @@
 package de.jvstvshd.velocitypunishment.punishment.impl;
 
 import com.velocitypowered.api.proxy.Player;
-import de.jvstvshd.velocitypunishment.punishment.Kick;
-import de.jvstvshd.velocitypunishment.punishment.PunishmentManager;
-import de.jvstvshd.velocitypunishment.punishment.PunishmentType;
-import de.jvstvshd.velocitypunishment.punishment.StandardPunishmentType;
+import de.jvstvshd.velocitypunishment.punishment.*;
 import de.jvstvshd.velocitypunishment.util.PlayerResolver;
 import net.kyori.adventure.text.Component;
 
@@ -25,7 +22,7 @@ public class DefaultKick extends AbstractPunishment implements Kick {
     }
 
     @Override
-    public CompletableFuture<Void> punish() {
+    public CompletableFuture<Punishment> punish() {
         Optional<Player> optPlayer = getPunishmentManager().getServer().getPlayer(getPlayerUuid());
         if (optPlayer.isEmpty())
             throw new IllegalArgumentException("Invalid player was not found. This could be because " +

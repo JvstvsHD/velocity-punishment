@@ -82,7 +82,6 @@ public abstract class AbstractPunishment implements Punishment {
 
     protected String convertReason(Component component) {
         String reason = LegacyComponentSerializer.legacy(LegacyComponentSerializer.SECTION_CHAR).serialize(component);
-        System.out.println("reason = " + reason);
         return reason;
     }
 

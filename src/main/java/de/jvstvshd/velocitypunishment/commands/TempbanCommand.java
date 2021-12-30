@@ -16,11 +16,9 @@ import net.kyori.adventure.text.format.TextDecoration;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.Optional;
-import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.stream.Collectors;
 
-import static de.jvstvshd.velocitypunishment.util.Util.INTERNAL_ERROR;
 import static de.jvstvshd.velocitypunishment.util.Util.copyComponent;
 
 public class TempbanCommand implements SimpleCommand {
@@ -39,18 +37,18 @@ public class TempbanCommand implements SimpleCommand {
     public void execute(Invocation invocation) {
         CommandSource source = invocation.source();
         if (invocation.arguments().length < 2) {
-            source.sendMessage(Component.text("Please use /tempban <player> <duration> [reason]").color(NamedTextColor.DARK_RED));
+            source.sendMessage(plugin.getMessageProvider().provide("command.tempban.usage", source, true).color(NamedTextColor.RED));
             return;
         }
         PunishmentHelper parser = new PunishmentHelper();
         plugin.getPlayerResolver().getOrQueryPlayerUuid(invocation.arguments()[0], service).whenCompleteAsync((uuid, throwable) -> {
             if (throwable != null) {
-                source.sendMessage(INTERNAL_ERROR);
+                source.sendMessage(plugin.getMessageProvider().internalError());
                 throwable.printStackTrace();
                 return;
             }
             if (uuid == null) {
-                source.sendMessage(Component.text(invocation.arguments()[0] + " could not be found."));
+                source.sendMessage(plugin.getMessageProvider().provide("commands.general.not-found", source, true, Component.text(invocation.arguments()[0]).color(NamedTextColor.YELLOW)).color(NamedTextColor.RED));
                 return;
             }
             Optional<PunishmentDuration> optDuration = parser.parseDuration(1, invocation);
@@ -58,27 +56,22 @@ public class TempbanCommand implements SimpleCommand {
                 return;
             }
             PunishmentDuration duration = optDuration.get();
-            TextComponent component = parser.parseComponent(2, invocation);
-            try {
-                plugin.getPunishmentManager().createBan(uuid, component, duration).punish().get();
-            } catch (InterruptedException | ExecutionException e) {
-                invocation.source().sendMessage(Util.INTERNAL_ERROR);
-                e.printStackTrace();
-                return;
-            }
-            String until = duration.expiration().format(DateTimeFormatter.ofPattern("dd.MM.yyyy HH:mm:ss"));
-            String uuidString = uuid.toString().toLowerCase();
-            source.sendMessage(Component.text("You have banned the player ").color(NamedTextColor.RED)
-                    .append(Component.text().append(copyComponent(invocation.arguments()[0]).color(NamedTextColor.YELLOW).decorate(TextDecoration.BOLD),
-                            Component.text("/").color(NamedTextColor.WHITE),
-                            copyComponent(uuidString).color(NamedTextColor.RED).decorate(TextDecoration.BOLD),
-                            Component.text(" for ").color(NamedTextColor.RED),
-                            component,
-                            Component.text(" until ").color(NamedTextColor.RED),
-                            Component.text(until).color(NamedTextColor.GREEN),
-                            Component.text(".").color(NamedTextColor.RED))));
+            TextComponent component = parser.parseComponent(2, invocation, Component.text("ban").color(NamedTextColor.DARK_RED));
+            plugin.getPunishmentManager().createBan(uuid, component, duration).punish().whenComplete((ban, t) -> {
+                if (t != null) {
+                    invocation.source().sendMessage(plugin.getMessageProvider().internalError());
+                    t.printStackTrace();
+                    return;
+                }
+                String until = duration.expiration().format(DateTimeFormatter.ofPattern("dd.MM.yyyy HH:mm:ss"));
+                String uuidString = uuid.toString().toLowerCase();
+                source.sendMessage(plugin.getMessageProvider().provide("command.tempban.success", source, true,
+                        copyComponent(invocation.arguments()[0]).color(NamedTextColor.YELLOW).decorate(TextDecoration.BOLD),
+                        copyComponent(uuidString).color(NamedTextColor.RED).decorate(TextDecoration.BOLD),
+                        Component.text(until).color(NamedTextColor.GREEN)));
+                source.sendMessage(plugin.getMessageProvider().provide("commands.general.punishment.id", source, true, Component.text(ban.getPunishmentUuid().toString().toLowerCase()).color(NamedTextColor.YELLOW)));
+            });
         }, service);
-
     }
 
     @Override

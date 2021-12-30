@@ -1,6 +1,6 @@
 package de.jvstvshd.velocitypunishment.message;
 
-import com.velocitypowered.api.proxy.Player;
+import com.velocitypowered.api.command.CommandSource;
 import net.kyori.adventure.text.Component;
 import org.jetbrains.annotations.NotNull;
 
@@ -13,7 +13,7 @@ public interface MessageProvider {
     Component prefix();
 
     @NotNull
-    Component provide(String key, Player player, Component... args);
+    Component provide(String key, CommandSource source, Component... args);
 
     @NotNull
     Component provide(String key, Component... args);
@@ -22,5 +22,5 @@ public interface MessageProvider {
     Component internalError(boolean withPrefix);
 
     @NotNull
-    Component provide(String key, Player player, boolean withPrefix, Component... args);
+    Component provide(String key, CommandSource source, boolean withPrefix, Component... args);
 }

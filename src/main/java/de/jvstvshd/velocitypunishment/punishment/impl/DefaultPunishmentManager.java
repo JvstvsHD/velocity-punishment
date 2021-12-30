@@ -12,6 +12,7 @@ import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
 import java.sql.*;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.Executor;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
@@ -45,7 +46,7 @@ public class DefaultPunishmentManager implements PunishmentManager {
 
     @SuppressWarnings("unchecked")
     @Override
-    public CompletableFuture<List<Punishment>> getPunishments(UUID player, ExecutorService service, PunishmentType... types) {
+    public CompletableFuture<List<Punishment>> getPunishments(UUID player, Executor service, PunishmentType... types) {
         return executeAsync(() -> {
             List<StandardPunishmentType> typeList = types.length == 0 ? Arrays.stream(StandardPunishmentType.values()).toList() : getTypes(types);
             List<Punishment> punishments = new ArrayList<>();
@@ -127,7 +128,7 @@ public class DefaultPunishmentManager implements PunishmentManager {
     }
 
     @Override
-    public <T extends Punishment> CompletableFuture<Optional<T>> getPunishment(UUID punishmentId, ExecutorService service) {
+    public <T extends Punishment> CompletableFuture<Optional<T>> getPunishment(UUID punishmentId, Executor service) {
         return executeAsync(() -> {
             try (Connection connection = dataSource.getConnection();
                  PreparedStatement statement = connection.prepareStatement(QUERY_PUNISHMENT_WITH_ID)) {
@@ -143,7 +144,7 @@ public class DefaultPunishmentManager implements PunishmentManager {
     }
 
     @Override
-    public CompletableFuture<Boolean> isBanned(UUID playerUuid, ExecutorService service) {
+    public CompletableFuture<Boolean> isBanned(UUID playerUuid, Executor service) {
         return executeAsync(() -> !getPunishments(playerUuid, service, StandardPunishmentType.BAN, StandardPunishmentType.PERMANENT_BAN).get().isEmpty(), service);
     }
 }

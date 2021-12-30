@@ -1,5 +1,6 @@
 package de.jvstvshd.velocitypunishment.message;
 
+import com.velocitypowered.api.command.CommandSource;
 import com.velocitypowered.api.proxy.Player;
 import de.jvstvshd.velocitypunishment.config.ConfigData;
 import net.kyori.adventure.key.Key;
@@ -80,8 +81,8 @@ public class ResourceBundleMessageProvider implements MessageProvider {
 
     @Override
     public @NotNull
-    Component provide(String key, Player player, Component... args) {
-        return GlobalTranslator.render(Component.translatable(key, args), localeProvider.provideLocale(player));
+    Component provide(String key, CommandSource source, Component... args) {
+        return GlobalTranslator.render(Component.translatable(key, args), localeProvider.provideLocale(source));
     }
 
     @Override
@@ -104,13 +105,19 @@ public class ResourceBundleMessageProvider implements MessageProvider {
     @Override
     public @NotNull
     Component internalError(boolean withPrefix) {
-        return withPrefix(internalError());
+        if (withPrefix) {
+            return withPrefix(internalError());
+        }
+        return internalError();
     }
 
     @Override
     public @NotNull
-    Component provide(String key, Player player, boolean withPrefix, Component... args) {
-        return withPrefix(provide(key, player, args));
+    Component provide(String key, CommandSource source, boolean withPrefix, Component... args) {
+        if (withPrefix) {
+            return withPrefix(provide(key, source, args));
+        }
+        return provide(key, source, args);
     }
 
     public LocaleProvider getLocaleProvider() {
@@ -128,11 +135,15 @@ public class ResourceBundleMessageProvider implements MessageProvider {
             this.configData = configData;
         }
 
-        public Locale provideLocale(Player player) {
+        public Locale provideLocale(CommandSource source) {
             if (configData.isForceUsingDefaultLanguage()) {
                 return configData.getDefaultLanguage();
             }
-            return player.getEffectiveLocale();
+            if (source instanceof Player player) {
+                return player.getEffectiveLocale();
+            }
+            //TODO: Implement correct locale
+            return Locale.ENGLISH;
         }
     }
 }

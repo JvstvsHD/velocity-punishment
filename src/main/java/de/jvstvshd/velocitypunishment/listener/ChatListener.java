@@ -49,7 +49,7 @@ public class ChatListener {
                 update(player.getUniqueId());
             } catch (ExecutionException | InterruptedException | TimeoutException e) {
                 e.printStackTrace();
-                event.getPlayer().sendMessage(Util.INTERNAL_ERROR);
+                event.getPlayer().sendMessage(plugin.getMessageProvider().internalError(true));
             }
             onChat(event);
         }

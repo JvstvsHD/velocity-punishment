@@ -21,9 +21,8 @@ import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
-import java.util.concurrent.*;
-
-import static de.jvstvshd.velocitypunishment.util.Util.INTERNAL_ERROR;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutorService;
 
 public class UnbanCommand implements SimpleCommand {
 
@@ -40,49 +39,49 @@ public class UnbanCommand implements SimpleCommand {
     @Override
     public void execute(Invocation invocation) {
         if (invocation.arguments().length < 1) {
-            invocation.source().sendMessage(Component.text("Please use /unban <player>").color(NamedTextColor.DARK_RED));
+            invocation.source().sendMessage(plugin.getMessageProvider().provide("command.unban.usage").color(NamedTextColor.RED));
             return;
         }
         var source = invocation.source();
         PunishmentHelper helper = new PunishmentHelper();
         helper.getPlayerUuid(0, service, plugin.getPlayerResolver(), invocation).whenCompleteAsync((uuid, throwable) -> {
             if (throwable != null) {
-                source.sendMessage(INTERNAL_ERROR);
+                source.sendMessage(plugin.getMessageProvider().internalError());
                 throwable.printStackTrace();
                 return;
             }
             if (uuid == null) {
-                source.sendMessage(Component.text(invocation.arguments()[0] + " could not be found."));
+                source.sendMessage(plugin.getMessageProvider().provide("commands.general.not-found", source, true,
+                        Component.text(invocation.arguments()[0]).color(NamedTextColor.YELLOW)).color(NamedTextColor.RED));
                 return;
             }
-            List<Punishment> punishments;
-            try {
-                punishments = plugin.getPunishmentManager().getPunishments(uuid, service, StandardPunishmentType.BAN, StandardPunishmentType.PERMANENT_BAN).get(5, TimeUnit.SECONDS);
-            } catch (InterruptedException | ExecutionException | TimeoutException e) {
-                e.printStackTrace();
-                invocation.source().sendMessage(Util.INTERNAL_ERROR);
-                return;
-            }
-            if (punishments.isEmpty()) {
-                invocation.source().sendMessage(Component.text("This player is not banned at the moment.").color(NamedTextColor.RED));
-                return;
-            }
-            if (punishments.size() > 1) {
-                invocation.source().sendMessage(Component.text("This player has multiple punishments with type (permanent) ban.").color(NamedTextColor.YELLOW));
-                for (Punishment punishment : punishments) {
-                    invocation.source().sendMessage(buildComponent(helper.buildPunishmentData(punishment), punishment));
+            plugin.getPunishmentManager().getPunishments(uuid, service, StandardPunishmentType.BAN, StandardPunishmentType.PERMANENT_BAN).whenComplete((punishments, t) -> {
+                if (t != null) {
+                    t.printStackTrace();
+                    invocation.source().sendMessage(plugin.getMessageProvider().internalError());
+                    return;
                 }
-            } else {
-                Punishment punishment = punishments.get(0);
-                punishment.cancel().whenCompleteAsync((unused, t) -> {
-                    if (t != null) {
-                        t.printStackTrace();
-                        invocation.source().sendMessage(Util.INTERNAL_ERROR);
-                        return;
+                if (punishments.isEmpty()) {
+                    invocation.source().sendMessage(plugin.getMessageProvider().provide("command.punishment.not-banned", source, true).color(NamedTextColor.RED));
+                    return;
+                }
+                if (punishments.size() > 1) {
+                    invocation.source().sendMessage(plugin.getMessageProvider().provide("command.unban.multiple-bans", source, true).color(NamedTextColor.YELLOW));
+                    for (Punishment punishment : punishments) {
+                        invocation.source().sendMessage(buildComponent(helper.buildPunishmentData(punishment, plugin.getMessageProvider(), source), punishment));
                     }
-                    invocation.source().sendMessage(Component.text("The ban was annulled.").color(NamedTextColor.GREEN));
-                });
-            }
+                } else {
+                    Punishment punishment = punishments.get(0);
+                    punishment.cancel().whenCompleteAsync((unused, th) -> {
+                        if (th != null) {
+                            th.printStackTrace();
+                            invocation.source().sendMessage(plugin.getMessageProvider().internalError());
+                            return;
+                        }
+                        invocation.source().sendMessage(plugin.getMessageProvider().provide("command.unban.success").color(NamedTextColor.GREEN));
+                    }, service);
+                }
+            });
         }, service);
     }
 

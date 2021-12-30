@@ -21,8 +21,10 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.*;
-import java.util.concurrent.*;
-import java.util.stream.Collectors;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.TimeoutException;
 
 import static de.jvstvshd.velocitypunishment.util.Util.INTERNAL_ERROR;
 
@@ -42,14 +44,21 @@ public class PunishmentCommand implements SimpleCommand {
         this.plugin = plugin;
     }
 
-    private final static List<String> options = ImmutableList.of("annul", "remove", "info", "change");
+    private final static List<String> PUNISHMENT_OPTIONS = ImmutableList.of("cancel", "remove", "info", "change");
+    private final static List<String> ALL_OPTIONS;
+
+    static {
+        var full = new ArrayList<>(PUNISHMENT_OPTIONS);
+        full.add("playerinfo");
+        ALL_OPTIONS = ImmutableList.copyOf(full);
+    }
 
     @Override
     public void execute(Invocation invocation) {
         String[] arguments = invocation.arguments();
         CommandSource source = invocation.source();
         if (arguments.length < 2) {
-            source.sendMessage(Component.text("Please use /punishment <playerinfo> <player> or <punishment id> <annul|info|change|info|remove>").color(NamedTextColor.DARK_RED));
+            source.sendMessage(plugin.getMessageProvider().provide("command.punishment.usage", source, true).color(NamedTextColor.RED));
             return;
         }
         var punishmentManager = plugin.getPunishmentManager();
@@ -58,48 +67,42 @@ public class PunishmentCommand implements SimpleCommand {
             PunishmentHelper helper = new PunishmentHelper();
             helper.getPlayerUuid(1, service, playerResolver, invocation).whenCompleteAsync((uuid, throwable) -> {
                 if (throwable != null) {
-                    source.sendMessage(INTERNAL_ERROR);
+                    source.sendMessage(plugin.getMessageProvider().internalError());
                     throwable.printStackTrace();
                     return;
                 }
                 if (uuid == null) {
-                    invocation.source().sendMessage(Component.text("This player is not banned at the moment.").color(NamedTextColor.RED));
+                    source.sendMessage(plugin.getMessageProvider().provide("command.punishment.not-banned", source, true).color(NamedTextColor.RED));
                     return;
                 }
-                List<Punishment> punishments;
-                try {
-                    punishments = punishmentManager.getPunishments(uuid, service).get(10, TimeUnit.SECONDS);
-                } catch (InterruptedException | TimeoutException | ExecutionException e) {
-                    e.printStackTrace();
-                    source.sendMessage(Util.INTERNAL_ERROR);
-                    return;
-                }
-                source.sendMessage(Component.text("The player has " + punishments.size() + " punishments.").color(NamedTextColor.AQUA));
-                for (Punishment punishment : punishments) {
-
-                    Component component = helper.buildPunishmentData(punishment)
-                            .clickEvent(ClickEvent.suggestCommand(punishment.getPunishmentUuid().toString().toLowerCase(Locale.ROOT)))
-                            .hoverEvent((HoverEventSource<Component>) op -> HoverEvent.showText(Component.text("Click to copy punishment id")
-                                    .color(NamedTextColor.GREEN)));
-                    source.sendMessage(component);
-                }
+                punishmentManager.getPunishments(uuid, service).whenComplete((punishments, t) -> {
+                    if (t != null) {
+                        source.sendMessage(plugin.getMessageProvider().internalError());
+                        t.printStackTrace();
+                        return;
+                    }
+                    source.sendMessage(plugin.getMessageProvider().provide("command.punishment.punishments", source, true, Component.text(punishments.size())).color(NamedTextColor.AQUA));
+                    for (Punishment punishment : punishments) {
+                        Component component = helper.buildPunishmentData(punishment, plugin.getMessageProvider(), source)
+                                .clickEvent(ClickEvent.suggestCommand(punishment.getPunishmentUuid().toString().toLowerCase(Locale.ROOT)))
+                                .hoverEvent((HoverEventSource<Component>) op -> HoverEvent.showText(plugin.getMessageProvider().provide("commands.general.copy")
+                                        .color(NamedTextColor.GREEN)));
+                        source.sendMessage(component);
+                    }
+                });
             }, service);
             return;
         }
         UUID uuid;
         try {
-            uuid = Util.parseUuid(arguments[0]);
+            uuid = Util.parseUuid(arguments[1]);
         } catch (IllegalArgumentException e) {
-            source.sendMessage(Component.text().append(Component.text("Could not parse string '").color(NamedTextColor.RED),
-                    Component.text(arguments[0]).color(NamedTextColor.YELLOW),
-                    Component.text("' as uuid.").color(NamedTextColor.RED)));
+            source.sendMessage(plugin.getMessageProvider().provide("command.punishment.uuid-parse-error", source, true, Component.text(arguments[0]).color(NamedTextColor.YELLOW)).color(NamedTextColor.RED));
             return;
         }
-        String option = arguments[1].toLowerCase(Locale.ROOT);
-        if (!options.contains(option)) {
-            source.sendMessage(Component.text()
-                    .append(Component.text("Unknown option: ").color(NamedTextColor.RED),
-                            Component.text(option).color(NamedTextColor.YELLOW)));
+        String option = arguments[0].toLowerCase(Locale.ROOT);
+        if (!PUNISHMENT_OPTIONS.contains(option)) {
+            source.sendMessage(plugin.getMessageProvider().provide("command.punishment.unknown-option", source, true, Component.text(option).color(NamedTextColor.YELLOW)).color(NamedTextColor.RED));
             return;
         }
         punishmentManager.getPunishment(uuid, service).whenCompleteAsync((optional, throwable) -> {
@@ -110,20 +113,19 @@ public class PunishmentCommand implements SimpleCommand {
             }
             Punishment punishment;
             if (optional.isEmpty()) {
-                source.sendMessage(Component.text().append(Component.text("Could not find a punishment for id '").color(NamedTextColor.RED),
-                        Component.text(uuid.toString().toLowerCase(Locale.ROOT)).color(NamedTextColor.YELLOW),
-                        Component.text("'.").color(NamedTextColor.RED)));
+                source.sendMessage(plugin.getMessageProvider().provide("command.punishment.unknown-punishment-id", source, true,
+                        Component.text(uuid.toString().toLowerCase(Locale.ROOT)).color(NamedTextColor.YELLOW)).color(NamedTextColor.RED));
                 return;
             }
             punishment = optional.get();
             switch (option) {
-                case "annul", "remove" -> punishment.cancel().whenCompleteAsync((unused, t) -> {
+                case "cancel", "remove" -> punishment.cancel().whenCompleteAsync((unused, t) -> {
                     if (t != null) {
                         t.printStackTrace();
                         source.sendMessage(Util.INTERNAL_ERROR);
                         return;
                     }
-                    source.sendMessage(Component.text("The punishment was successfully annulled.").color(NamedTextColor.GREEN));
+                    source.sendMessage(plugin.getMessageProvider().provide("punishment.remove", source, true).color(NamedTextColor.GREEN));
                     try {
                         chatListener.update(uuid);
                     } catch (ExecutionException | InterruptedException | TimeoutException e) {
@@ -131,7 +133,7 @@ public class PunishmentCommand implements SimpleCommand {
                         e.printStackTrace();
                     }
                 });
-                case "info" -> source.sendMessage(new PunishmentHelper().buildPunishmentData(punishment));
+                case "info" -> source.sendMessage(new PunishmentHelper().buildPunishmentData(punishment, plugin.getMessageProvider(), source));
                 case "change" -> source.sendMessage(Component.text("Soon™️"));
             }
         });
@@ -165,13 +167,9 @@ public class PunishmentCommand implements SimpleCommand {
     public List<String> suggest(Invocation invocation) {
         String[] arguments = invocation.arguments();
         if (arguments.length == 0) {
-            return List.of("playerinfo");
+            return ALL_OPTIONS;
         } else if (arguments.length == 1 && arguments[0].toLowerCase(Locale.ROOT).startsWith("p")) {
-            return List.of("playerinfo");
-        } else if (arguments.length == 2) {
-            return options;
-        } else if (arguments.length == 3) {
-            return options.stream().filter(s -> s.toLowerCase().startsWith(arguments[2])).collect(Collectors.toList());
+            return ALL_OPTIONS.stream().filter(s -> s.toLowerCase(Locale.ROOT).startsWith(arguments[1].toLowerCase(Locale.ROOT))).toList();
         }
         return new ArrayList<>();
     }

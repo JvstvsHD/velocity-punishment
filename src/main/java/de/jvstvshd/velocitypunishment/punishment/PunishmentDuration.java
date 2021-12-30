@@ -167,7 +167,7 @@ public class PunishmentDuration implements Comparable<PunishmentDuration> {
                 }
                 TimeUnit chronoUnit = characterMapping.get(unit);
                 if (chronoUnit == null)
-                    throw new IllegalArgumentException("Unknown chrono unit for character '" + unit + "'");
+                    throw new IllegalArgumentException("Unknown time unit for character '" + unit + "'");
                 converted.put(chronoUnit, numericValue);
                 index++;
             }

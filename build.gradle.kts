@@ -3,7 +3,7 @@ plugins {
 }
 
 group = "de.jvstvshd.punishment"
-version = "1.0.0-beta.1"
+version = "1.0.0-beta.2"
 
 repositories {
     maven("https://nexus.velocitypowered.com/repository/maven-public/")
@@ -31,6 +31,8 @@ tasks.getByName<Test>("test") {
 
 tasks.withType<JavaCompile>().configureEach {
     options.encoding = "UTF-8"
+    sourceCompatibility = "17"
+    targetCompatibility = "17"
 }
 
 tasks {
