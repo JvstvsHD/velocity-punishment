@@ -3,9 +3,9 @@ package de.jvstvshd.velocitypunishment.punishment.impl;
 import com.google.common.collect.ImmutableList;
 import com.velocitypowered.api.proxy.ProxyServer;
 import com.zaxxer.hikari.HikariDataSource;
+import de.jvstvshd.velocitypunishment.VelocityPunishmentPlugin;
 import de.jvstvshd.velocitypunishment.internal.Util;
 import de.jvstvshd.velocitypunishment.punishment.*;
-import de.jvstvshd.velocitypunishment.punishment.util.PlayerResolver;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
 
@@ -23,25 +23,25 @@ public class DefaultPunishmentManager implements PunishmentManager {
     private final ProxyServer proxyServer;
     private final HikariDataSource dataSource;
     private final ExecutorService service = Executors.newCachedThreadPool();
-    private final PlayerResolver playerResolver;
+    private final VelocityPunishmentPlugin plugin;
 
     private static final String QUERY_PUNISHMENT_WITH_ID = "SELECT uuid, name, type, expiration, reason FROM velocity_punishment WHERE punishment_id = ?";
     private static final String SELECT_PUNISHMENT_WITH_TYPE = "SELECT expiration, reason, punishment_id FROM velocity_punishment WHERE uuid = ? AND type = ?";
 
-    public DefaultPunishmentManager(ProxyServer proxyServer, HikariDataSource dataSource, PlayerResolver playerResolver) {
+    public DefaultPunishmentManager(ProxyServer proxyServer, HikariDataSource dataSource, VelocityPunishmentPlugin plugin) {
         this.proxyServer = proxyServer;
         this.dataSource = dataSource;
-        this.playerResolver = playerResolver;
+        this.plugin = plugin;
     }
 
     @Override
     public Ban createBan(UUID player, Component reason, PunishmentDuration duration) {
-        return new DefaultBan(player, reason, dataSource, playerResolver, this, service, duration);
+        return new DefaultBan(player, reason, dataSource, plugin.getPlayerResolver(), this, service, duration, plugin.getMessageProvider());
     }
 
     @Override
     public Mute createMute(UUID player, Component reason, PunishmentDuration duration) {
-        return new DefaultMute(player, reason, dataSource, playerResolver, this, service, duration);
+        return new DefaultMute(player, reason, dataSource, plugin.getPlayerResolver(), this, service, duration, plugin.getMessageProvider());
     }
 
     @SuppressWarnings("unchecked")
@@ -72,9 +72,9 @@ public class DefaultPunishmentManager implements PunishmentManager {
                 final UUID punishmentUuid = Util.parseUuid(resultSet.getString(3));
                 Punishment punishment;
                 switch (type) {
-                    case BAN, PERMANENT_BAN -> punishment = new DefaultBan(uuid, reason, dataSource, service, this, punishmentUuid, playerResolver, duration);
-                    case MUTE, PERMANENT_MUTE -> punishment = new DefaultMute(uuid, reason, dataSource, service, this, punishmentUuid, playerResolver, duration);
-                    case KICK -> punishment = new DefaultKick(uuid, reason, dataSource, service, this, punishmentUuid, playerResolver);
+                    case BAN, PERMANENT_BAN -> punishment = new DefaultBan(uuid, reason, dataSource, service, this, punishmentUuid, plugin.getPlayerResolver(), duration, plugin.getMessageProvider());
+                    case MUTE, PERMANENT_MUTE -> punishment = new DefaultMute(uuid, reason, dataSource, service, this, punishmentUuid, plugin.getPlayerResolver(), duration, plugin.getMessageProvider());
+                    case KICK -> punishment = new DefaultKick(uuid, reason, dataSource, service, this, punishmentUuid, plugin.getPlayerResolver(), plugin.getMessageProvider());
                     default -> throw new UnsupportedOperationException("unhandled punishment type: " + type.getName());
                 }
                 punishments.add(punishment);
@@ -97,9 +97,9 @@ public class DefaultPunishmentManager implements PunishmentManager {
         }
         final Component reason = LegacyComponentSerializer.legacySection().deserialize(resultSet.getString(reasonIndex));
         return (T) switch (type) {
-            case BAN, PERMANENT_BAN -> new DefaultBan(uuid, reason, dataSource, service, this, punishmentUuid, playerResolver, duration);
-            case MUTE, PERMANENT_MUTE -> new DefaultMute(uuid, reason, dataSource, service, this, punishmentUuid, playerResolver, duration);
-            case KICK -> new DefaultKick(uuid, reason, dataSource, service, this, punishmentUuid, playerResolver);
+            case BAN, PERMANENT_BAN -> new DefaultBan(uuid, reason, dataSource, service, this, punishmentUuid, plugin.getPlayerResolver(), duration, plugin.getMessageProvider());
+            case MUTE, PERMANENT_MUTE -> new DefaultMute(uuid, reason, dataSource, service, this, punishmentUuid, plugin.getPlayerResolver(), duration, plugin.getMessageProvider());
+            case KICK -> new DefaultKick(uuid, reason, dataSource, service, this, punishmentUuid, plugin.getPlayerResolver(), plugin.getMessageProvider());
         };
     }
 

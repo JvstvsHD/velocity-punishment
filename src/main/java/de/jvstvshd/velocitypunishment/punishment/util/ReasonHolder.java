@@ -1,5 +1,6 @@
-package de.jvstvshd.velocitypunishment.punishment;
+package de.jvstvshd.velocitypunishment.punishment.util;
 
+import com.velocitypowered.api.command.CommandSource;
 import net.kyori.adventure.text.Component;
 
 public interface ReasonHolder {
@@ -11,7 +12,9 @@ public interface ReasonHolder {
 
     /**
      * Creates the full reason inclusive when the ban ends (or that the ban is permanent).
+     *
+     * @param source
      * @return the full reason with all information.
      */
-    Component createFullReason();
+    Component createFullReason(CommandSource source);
 }

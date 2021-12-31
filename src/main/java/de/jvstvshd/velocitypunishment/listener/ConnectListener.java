@@ -50,7 +50,7 @@ public record ConnectListener(VelocityPunishmentPlugin plugin,
         if (ban == null)
             return;
         if (ban.isOngoing()) {
-            Component deny = ban.createFullReason();
+            Component deny = ban.createFullReason(event.getPlayer());
             event.setResult(ResultedEvent.ComponentResult.denied(deny));
         } else {
             ban.cancel().whenCompleteAsync((unused, t) -> {

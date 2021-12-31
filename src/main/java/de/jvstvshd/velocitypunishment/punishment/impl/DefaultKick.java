@@ -1,6 +1,8 @@
 package de.jvstvshd.velocitypunishment.punishment.impl;
 
+import com.velocitypowered.api.command.CommandSource;
 import com.velocitypowered.api.proxy.Player;
+import de.jvstvshd.velocitypunishment.message.MessageProvider;
 import de.jvstvshd.velocitypunishment.punishment.*;
 import de.jvstvshd.velocitypunishment.punishment.util.PlayerResolver;
 import net.kyori.adventure.text.Component;
@@ -13,12 +15,12 @@ import java.util.concurrent.ExecutorService;
 
 public class DefaultKick extends AbstractPunishment implements Kick {
 
-    public DefaultKick(UUID playerUuid, Component reason, DataSource dataSource, PlayerResolver playerResolver, PunishmentManager punishmentManager, ExecutorService service) {
-        super(playerUuid, reason, dataSource, playerResolver, punishmentManager, service);
+    public DefaultKick(UUID playerUuid, Component reason, DataSource dataSource, PlayerResolver playerResolver, PunishmentManager punishmentManager, ExecutorService service, MessageProvider messageProvider) {
+        super(playerUuid, reason, dataSource, playerResolver, punishmentManager, service, messageProvider);
     }
 
-    public DefaultKick(UUID playerUuid, Component reason, DataSource dataSource, ExecutorService service, PunishmentManager punishmentManager, UUID punishmentUuid, PlayerResolver playerResolver) {
-        super(playerUuid, reason, dataSource, service, punishmentManager, punishmentUuid, playerResolver);
+    public DefaultKick(UUID playerUuid, Component reason, DataSource dataSource, ExecutorService service, PunishmentManager punishmentManager, UUID punishmentUuid, PlayerResolver playerResolver, MessageProvider messageProvider) {
+        super(playerUuid, reason, dataSource, service, punishmentManager, punishmentUuid, playerResolver, messageProvider);
     }
 
     @Override
@@ -38,7 +40,7 @@ public class DefaultKick extends AbstractPunishment implements Kick {
     }
 
     @Override
-    public Component createFullReason() {
+    public Component createFullReason(CommandSource source) {
         return getReason();
     }
 }

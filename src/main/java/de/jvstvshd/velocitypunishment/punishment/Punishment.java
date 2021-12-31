@@ -1,5 +1,6 @@
 package de.jvstvshd.velocitypunishment.punishment;
 
+import de.jvstvshd.velocitypunishment.punishment.util.ReasonHolder;
 import net.kyori.adventure.text.Component;
 
 import java.time.LocalDateTime;

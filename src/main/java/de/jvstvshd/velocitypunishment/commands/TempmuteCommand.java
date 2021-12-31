@@ -68,8 +68,9 @@ public class TempmuteCommand implements SimpleCommand {
                 source.sendMessage(plugin.getMessageProvider().provide("command.tempmute.success", source, true,
                         copyComponent(invocation.arguments()[0]).color(NamedTextColor.YELLOW).decorate(TextDecoration.BOLD),
                         copyComponent(uuidString).color(NamedTextColor.RED).decorate(TextDecoration.BOLD),
+                        component,
                         Component.text(until).color(NamedTextColor.GREEN)));
-                source.sendMessage(plugin.getMessageProvider().provide("commands.general.punishment.id", source, true, Component.text(mute.getPunishmentUuid().toString().toLowerCase()).color(NamedTextColor.YELLOW)));
+                source.sendMessage(plugin.getMessageProvider().provide("commands.general.punishment.id", source, true, copyComponent(mute.getPunishmentUuid().toString().toLowerCase()).color(NamedTextColor.YELLOW)));
             });
         }, service);
     }

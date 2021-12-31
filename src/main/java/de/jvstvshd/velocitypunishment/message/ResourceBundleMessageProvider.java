@@ -165,7 +165,8 @@ public class ResourceBundleMessageProvider implements MessageProvider {
                 return configData.getForcedLanguage();
             }
             if (source instanceof Player player) {
-                return player.getEffectiveLocale();
+                var effectiveLocale = player.getEffectiveLocale();
+                return effectiveLocale == null ? Locale.getDefault() : effectiveLocale;
             }
             return Locale.getDefault();
         }

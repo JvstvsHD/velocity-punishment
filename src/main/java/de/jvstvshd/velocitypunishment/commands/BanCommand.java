@@ -54,8 +54,8 @@ public class BanCommand implements SimpleCommand {
                     String uuidString = uuid.toString().toLowerCase();
                     source.sendMessage(plugin.getMessageProvider().provide("command.ban.success", source, true, copyComponent(invocation.arguments()[0]).color(NamedTextColor.YELLOW).decorate(TextDecoration.BOLD),
                             copyComponent(uuidString).color(NamedTextColor.YELLOW).decorate(TextDecoration.BOLD),
-                            component).color(NamedTextColor.RED));
-                    source.sendMessage(plugin.getMessageProvider().provide("commands.general.punishment.id", source, true, Component.text(ban.getPunishmentUuid().toString().toLowerCase()).color(NamedTextColor.YELLOW)));
+                            component).color(NamedTextColor.GREEN));
+                    source.sendMessage(plugin.getMessageProvider().provide("commands.general.punishment.id", source, true, copyComponent(ban.getPunishmentUuid().toString().toLowerCase()).color(NamedTextColor.YELLOW)));
                 }
             });
         }, plugin.getService());

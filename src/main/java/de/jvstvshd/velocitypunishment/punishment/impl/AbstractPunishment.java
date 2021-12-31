@@ -1,5 +1,6 @@
 package de.jvstvshd.velocitypunishment.punishment.impl;
 
+import de.jvstvshd.velocitypunishment.message.MessageProvider;
 import de.jvstvshd.velocitypunishment.punishment.Punishment;
 import de.jvstvshd.velocitypunishment.punishment.PunishmentManager;
 import de.jvstvshd.velocitypunishment.punishment.util.PlayerResolver;
@@ -21,6 +22,7 @@ public abstract class AbstractPunishment implements Punishment {
     private final UUID punishmentUuid;
     private final PunishmentManager punishmentManager;
     private final PlayerResolver playerResolver;
+    private final MessageProvider messageProvider;
 
     protected final static String APPLY_PUNISHMENT = "INSERT INTO velocity_punishment" +
             " (uuid, name, type, expiration, reason, punishment_id) VALUES (?, ?, ?, ?, ?, ?)";
@@ -29,11 +31,11 @@ public abstract class AbstractPunishment implements Punishment {
     protected final static String APPLY_CHANGE = "UPDATE velocity_punishment SET reason = ?, expiration = ?, permanent = ? WHERE punishment_id = ?";
     private boolean validity;
 
-    public AbstractPunishment(UUID playerUuid, Component reason, DataSource dataSource, PlayerResolver playerResolver, PunishmentManager punishmentManager, ExecutorService service) {
-        this(playerUuid, reason, dataSource, service, punishmentManager, UUID.randomUUID(), playerResolver);
+    public AbstractPunishment(UUID playerUuid, Component reason, DataSource dataSource, PlayerResolver playerResolver, PunishmentManager punishmentManager, ExecutorService service, MessageProvider messageProvider) {
+        this(playerUuid, reason, dataSource, service, punishmentManager, UUID.randomUUID(), playerResolver, messageProvider);
     }
 
-    public AbstractPunishment(UUID playerUuid, Component reason, DataSource dataSource, ExecutorService service, PunishmentManager punishmentManager, UUID punishmentUuid, PlayerResolver playerResolver) {
+    public AbstractPunishment(UUID playerUuid, Component reason, DataSource dataSource, ExecutorService service, PunishmentManager punishmentManager, UUID punishmentUuid, PlayerResolver playerResolver, MessageProvider messageProvider) {
         this.reason = reason;
         this.dataSource = dataSource;
         this.service = service;
@@ -42,6 +44,7 @@ public abstract class AbstractPunishment implements Punishment {
         this.punishmentUuid = punishmentUuid;
         this.playerResolver = playerResolver;
         this.validity = true;
+        this.messageProvider = messageProvider;
     }
 
     public DataSource getDataSource() {
@@ -112,5 +115,9 @@ public abstract class AbstractPunishment implements Punishment {
 
     public PlayerResolver getPlayerResolver() {
         return playerResolver;
+    }
+
+    public MessageProvider getMessageProvider() {
+        return messageProvider;
     }
 }

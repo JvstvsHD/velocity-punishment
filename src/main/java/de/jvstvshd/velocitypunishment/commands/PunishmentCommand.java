@@ -166,7 +166,7 @@ public class PunishmentCommand implements SimpleCommand {
         String[] arguments = invocation.arguments();
         if (arguments.length == 0) {
             return ALL_OPTIONS;
-        } else if (arguments.length == 1 && arguments[0].toLowerCase(Locale.ROOT).startsWith("p")) {
+        } else if (arguments.length == 1) {
             return ALL_OPTIONS.stream().filter(s -> s.toLowerCase(Locale.ROOT).startsWith(arguments[0].toLowerCase(Locale.ROOT))).toList();
         }
         return new ArrayList<>();

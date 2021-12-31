@@ -61,7 +61,7 @@ public class VelocityPunishmentPlugin {
             logger.error("Could not load configuration", e);
         }
         dataSource = createDataSource();
-        punishmentManager = new DefaultPunishmentManager(server, dataSource, playerResolver);
+        punishmentManager = new DefaultPunishmentManager(server, dataSource, this);
         try {
             initDataSource();
         } catch (SQLException e) {

@@ -58,8 +58,8 @@ public class MuteCommand implements SimpleCommand {
                     String uuidString = uuid.toString().toLowerCase();
                     source.sendMessage(plugin.getMessageProvider().provide("command.mute.success", source, true, copyComponent(invocation.arguments()[0]).color(NamedTextColor.YELLOW).decorate(TextDecoration.BOLD),
                             copyComponent(uuidString).color(NamedTextColor.YELLOW).decorate(TextDecoration.BOLD),
-                            reason).color(NamedTextColor.RED));
-                    source.sendMessage(plugin.getMessageProvider().provide("commands.general.punishment.id", source, true, Component.text(mute.getPunishmentUuid().toString().toLowerCase()).color(NamedTextColor.YELLOW)));
+                            reason).color(NamedTextColor.GREEN));
+                    source.sendMessage(plugin.getMessageProvider().provide("commands.general.punishment.id", source, true, copyComponent(mute.getPunishmentUuid().toString().toLowerCase()).color(NamedTextColor.YELLOW)));
                 }
                 if (plugin.getServer().getPlayer(uuid).isPresent()) {
                     chatListener.getMutes().put(uuid, new ChatListener.MuteContainer().setMute((Mute) mute));

@@ -1,7 +1,9 @@
 package de.jvstvshd.velocitypunishment.punishment.impl;
 
+import com.velocitypowered.api.command.CommandSource;
 import com.velocitypowered.api.proxy.Player;
 import de.jvstvshd.velocitypunishment.internal.Util;
+import de.jvstvshd.velocitypunishment.message.MessageProvider;
 import de.jvstvshd.velocitypunishment.punishment.*;
 import de.jvstvshd.velocitypunishment.punishment.util.PlayerResolver;
 import net.kyori.adventure.text.Component;
@@ -23,12 +25,12 @@ import java.util.concurrent.TimeUnit;
 
 public class DefaultBan extends AbstractTemporalPunishment implements Ban {
 
-    public DefaultBan(UUID playerUuid, Component reason, DataSource dataSource, PlayerResolver playerResolver, PunishmentManager punishmentManager, ExecutorService service, PunishmentDuration duration) {
-        super(playerUuid, reason, dataSource, playerResolver, punishmentManager, service, duration);
+    public DefaultBan(UUID playerUuid, Component reason, DataSource dataSource, PlayerResolver playerResolver, PunishmentManager punishmentManager, ExecutorService service, PunishmentDuration duration, MessageProvider messageProvider) {
+        super(playerUuid, reason, dataSource, playerResolver, punishmentManager, service, duration, messageProvider);
     }
 
-    public DefaultBan(UUID playerUuid, Component reason, DataSource dataSource, ExecutorService service, PunishmentManager punishmentManager, UUID punishmentUuid, PlayerResolver playerResolver, PunishmentDuration duration) {
-        super(playerUuid, reason, dataSource, service, punishmentManager, punishmentUuid, playerResolver, duration);
+    public DefaultBan(UUID playerUuid, Component reason, DataSource dataSource, ExecutorService service, PunishmentManager punishmentManager, UUID punishmentUuid, PlayerResolver playerResolver, PunishmentDuration duration, MessageProvider messageProvider) {
+        super(playerUuid, reason, dataSource, service, punishmentManager, punishmentUuid, playerResolver, duration, messageProvider);
     }
 
     @Override
@@ -80,7 +82,7 @@ public class DefaultBan extends AbstractTemporalPunishment implements Ban {
                 statement.setString(4, Util.trimUuid(getPunishmentUuid()));
                 statement.executeUpdate();
             }
-            return new DefaultBan(getPlayerUuid(), newReason, getDataSource(), getPlayerResolver(), getPunishmentManager(), getService(), newDuration);
+            return new DefaultBan(getPlayerUuid(), newReason, getDataSource(), getPlayerResolver(), getPunishmentManager(), getService(), newDuration, getMessageProvider());
         }, getService());
     }
 
@@ -93,30 +95,20 @@ public class DefaultBan extends AbstractTemporalPunishment implements Ban {
         Optional<Player> optionalPlayer = getPunishmentManager().getServer().getPlayer(getPlayerUuid());
         if (optionalPlayer.isEmpty())
             return;
-        optionalPlayer.get().disconnect(createFullReason());
+        optionalPlayer.get().disconnect(createFullReason(optionalPlayer.get()));
     }
 
     @Override
-    public Component createFullReason() {
+    public Component createFullReason(CommandSource source) {
         if (!isValid()) {
             return Component.text("INVALID").decorate(TextDecoration.BOLD).color(NamedTextColor.DARK_RED);
         }
         if (isPermanent()) {
-            return Component.text().append(Component.text("You have been permanently banned from this server.\n\n")
-                                    .color(NamedTextColor.DARK_RED),
-                            Component.text("Reason: \n").color(NamedTextColor.RED),
-                            getReason())
-                    .build();
+            return getMessageProvider().provide("punishment.ban.permanent.full-reason", source, true, getReason());
         } else {
-            return Component.text().append(Component.text("You are banned for ").color(NamedTextColor.DARK_RED),
-                    Component.text(getDuration().getRemainingDuration()).color(NamedTextColor.YELLOW),
-
-                    Component.text(".\n\n").color(NamedTextColor.DARK_RED),
-                    Component.text("Reason: \n").color(NamedTextColor.RED),
-                    getReason(),
-                    Component.text("\n\nEnd of punishment: ").color(NamedTextColor.RED),
-                    Component.text(getDuration().expiration().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")))
-                            .color(NamedTextColor.YELLOW)).build();
+            var until = Component.text(getDuration().expiration().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")))
+                    .color(NamedTextColor.YELLOW);
+            return getMessageProvider().provide("punishment.ban.temp.full-reason", source, true, Component.text(getDuration().getRemainingDuration()).color(NamedTextColor.YELLOW), getReason(), until);
         }
     }
 

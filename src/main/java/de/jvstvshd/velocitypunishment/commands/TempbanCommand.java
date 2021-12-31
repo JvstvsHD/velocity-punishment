@@ -68,7 +68,8 @@ public class TempbanCommand implements SimpleCommand {
                 source.sendMessage(plugin.getMessageProvider().provide("command.tempban.success", source, true,
                         copyComponent(invocation.arguments()[0]).color(NamedTextColor.YELLOW).decorate(TextDecoration.BOLD),
                         copyComponent(uuidString).color(NamedTextColor.RED).decorate(TextDecoration.BOLD),
-                        Component.text(until).color(NamedTextColor.GREEN)));
+                        component,
+                        Component.text(until).color(NamedTextColor.GREEN)).color(NamedTextColor.GREEN));
                 source.sendMessage(plugin.getMessageProvider().provide("commands.general.punishment.id", source, true, Component.text(ban.getPunishmentUuid().toString().toLowerCase()).color(NamedTextColor.YELLOW)));
             });
         }, service);

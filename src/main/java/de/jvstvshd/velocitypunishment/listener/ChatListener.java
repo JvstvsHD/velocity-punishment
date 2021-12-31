@@ -48,7 +48,7 @@ public class ChatListener {
                 return;
             }
             event.setResult(PlayerChatEvent.ChatResult.denied());
-            event.getPlayer().sendMessage(container.getMute().createFullReason());
+            event.getPlayer().sendMessage(container.getMute().createFullReason(event.getPlayer()));
         } else {
             try {
                 update(player.getUniqueId());
