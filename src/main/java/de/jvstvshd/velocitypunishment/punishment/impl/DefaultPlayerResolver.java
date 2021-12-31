@@ -4,8 +4,8 @@ import com.google.gson.JsonElement;
 import com.google.gson.JsonParser;
 import com.velocitypowered.api.proxy.Player;
 import com.velocitypowered.api.proxy.ProxyServer;
-import de.jvstvshd.velocitypunishment.util.PlayerResolver;
-import de.jvstvshd.velocitypunishment.util.Util;
+import de.jvstvshd.velocitypunishment.internal.Util;
+import de.jvstvshd.velocitypunishment.punishment.util.PlayerResolver;
 import org.jetbrains.annotations.NotNull;
 
 import java.net.URI;
@@ -17,6 +17,7 @@ import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executor;
 
+@SuppressWarnings("ClassCanBeRecord")
 public class DefaultPlayerResolver implements PlayerResolver {
 
     private final ProxyServer proxyServer;

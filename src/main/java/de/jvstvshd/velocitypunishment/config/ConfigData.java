@@ -6,18 +6,13 @@ import java.util.Locale;
 public class ConfigData {
 
     private DataBaseData dataBaseData = new DataBaseData();
-    private Locale defaultLanguage = Locale.ENGLISH;
-    private boolean forceUsingDefaultLanguage = false;
+    private Locale forcedLanguage = null;
 
     public DataBaseData getDataBaseData() {
         return dataBaseData;
     }
 
-    public Locale getDefaultLanguage() {
-        return defaultLanguage;
-    }
-
-    public boolean isForceUsingDefaultLanguage() {
-        return forceUsingDefaultLanguage;
+    public Locale getForcedLanguage() {
+        return forcedLanguage;
     }
 }

@@ -3,9 +3,9 @@ package de.jvstvshd.velocitypunishment.punishment.impl;
 import com.google.common.collect.ImmutableList;
 import com.velocitypowered.api.proxy.ProxyServer;
 import com.zaxxer.hikari.HikariDataSource;
+import de.jvstvshd.velocitypunishment.internal.Util;
 import de.jvstvshd.velocitypunishment.punishment.*;
-import de.jvstvshd.velocitypunishment.util.PlayerResolver;
-import de.jvstvshd.velocitypunishment.util.Util;
+import de.jvstvshd.velocitypunishment.punishment.util.PlayerResolver;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
 
@@ -16,7 +16,7 @@ import java.util.concurrent.Executor;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
-import static de.jvstvshd.velocitypunishment.util.Util.executeAsync;
+import static de.jvstvshd.velocitypunishment.internal.Util.executeAsync;
 
 public class DefaultPunishmentManager implements PunishmentManager {
 

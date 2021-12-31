@@ -1,4 +1,4 @@
-package de.jvstvshd.velocitypunishment.util;
+package de.jvstvshd.velocitypunishment.punishment.util;
 
 import org.jetbrains.annotations.NotNull;
 

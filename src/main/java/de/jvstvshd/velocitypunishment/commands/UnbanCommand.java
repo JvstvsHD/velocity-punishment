@@ -3,10 +3,10 @@ package de.jvstvshd.velocitypunishment.commands;
 import com.google.common.collect.ImmutableList;
 import com.velocitypowered.api.command.SimpleCommand;
 import de.jvstvshd.velocitypunishment.VelocityPunishmentPlugin;
+import de.jvstvshd.velocitypunishment.internal.PunishmentHelper;
+import de.jvstvshd.velocitypunishment.internal.Util;
 import de.jvstvshd.velocitypunishment.punishment.Punishment;
-import de.jvstvshd.velocitypunishment.punishment.PunishmentHelper;
 import de.jvstvshd.velocitypunishment.punishment.StandardPunishmentType;
-import de.jvstvshd.velocitypunishment.util.Util;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.event.ClickEvent;
 import net.kyori.adventure.text.event.HoverEvent;
@@ -46,7 +46,7 @@ public class UnbanCommand implements SimpleCommand {
         PunishmentHelper helper = new PunishmentHelper();
         helper.getPlayerUuid(0, service, plugin.getPlayerResolver(), invocation).whenCompleteAsync((uuid, throwable) -> {
             if (throwable != null) {
-                source.sendMessage(plugin.getMessageProvider().internalError());
+                source.sendMessage(plugin.getMessageProvider().internalError(source, true));
                 throwable.printStackTrace();
                 return;
             }
@@ -58,7 +58,7 @@ public class UnbanCommand implements SimpleCommand {
             plugin.getPunishmentManager().getPunishments(uuid, service, StandardPunishmentType.BAN, StandardPunishmentType.PERMANENT_BAN).whenComplete((punishments, t) -> {
                 if (t != null) {
                     t.printStackTrace();
-                    invocation.source().sendMessage(plugin.getMessageProvider().internalError());
+                    invocation.source().sendMessage(plugin.getMessageProvider().internalError(source, true));
                     return;
                 }
                 if (punishments.isEmpty()) {
@@ -75,7 +75,7 @@ public class UnbanCommand implements SimpleCommand {
                     punishment.cancel().whenCompleteAsync((unused, th) -> {
                         if (th != null) {
                             th.printStackTrace();
-                            invocation.source().sendMessage(plugin.getMessageProvider().internalError());
+                            invocation.source().sendMessage(plugin.getMessageProvider().internalError(source, true));
                             return;
                         }
                         invocation.source().sendMessage(plugin.getMessageProvider().provide("command.unban.success").color(NamedTextColor.GREEN));

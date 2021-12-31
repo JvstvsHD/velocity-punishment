@@ -2,7 +2,7 @@ package de.jvstvshd.velocitypunishment.punishment.impl;
 
 import de.jvstvshd.velocitypunishment.punishment.Punishment;
 import de.jvstvshd.velocitypunishment.punishment.PunishmentManager;
-import de.jvstvshd.velocitypunishment.util.PlayerResolver;
+import de.jvstvshd.velocitypunishment.punishment.util.PlayerResolver;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
 
@@ -81,8 +81,7 @@ public abstract class AbstractPunishment implements Punishment {
     }
 
     protected String convertReason(Component component) {
-        String reason = LegacyComponentSerializer.legacy(LegacyComponentSerializer.SECTION_CHAR).serialize(component);
-        return reason;
+        return LegacyComponentSerializer.legacy(LegacyComponentSerializer.SECTION_CHAR).serialize(component);
     }
 
     public boolean isValid() {

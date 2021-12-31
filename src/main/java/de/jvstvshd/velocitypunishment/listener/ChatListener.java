@@ -5,11 +5,11 @@ import com.velocitypowered.api.event.connection.DisconnectEvent;
 import com.velocitypowered.api.event.player.PlayerChatEvent;
 import com.velocitypowered.api.proxy.Player;
 import de.jvstvshd.velocitypunishment.VelocityPunishmentPlugin;
+import de.jvstvshd.velocitypunishment.internal.Util;
 import de.jvstvshd.velocitypunishment.punishment.Mute;
 import de.jvstvshd.velocitypunishment.punishment.Punishment;
 import de.jvstvshd.velocitypunishment.punishment.StandardPunishmentType;
 import de.jvstvshd.velocitypunishment.punishment.impl.DefaultMute;
-import de.jvstvshd.velocitypunishment.util.Util;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
 
@@ -39,17 +39,22 @@ public class ChatListener {
         Player player = event.getPlayer();
         MuteContainer container = mutes.get(player.getUniqueId());
         if (container != null) {
-            if (container.getType() == MuteType.LOADING || container.getType() == MuteType.NOT_MUTED) {
+            if (container.getType() == MuteType.NOT_MUTED) {
+                return;
+            }
+            if (container.getType() == MuteType.LOADING) {
+                event.setResult(PlayerChatEvent.ChatResult.denied());
+                event.getPlayer().sendMessage(Component.text("Please wait a moment...").color(NamedTextColor.GRAY));
                 return;
             }
             event.setResult(PlayerChatEvent.ChatResult.denied());
-            event.getPlayer().sendMessage(Component.text("Please wait a moment").color(NamedTextColor.RED));
+            event.getPlayer().sendMessage(container.getMute().createFullReason());
         } else {
             try {
                 update(player.getUniqueId());
             } catch (ExecutionException | InterruptedException | TimeoutException e) {
                 e.printStackTrace();
-                event.getPlayer().sendMessage(plugin.getMessageProvider().internalError(true));
+                event.getPlayer().sendMessage(plugin.getMessageProvider().internalError(event.getPlayer(), true));
             }
             onChat(event);
         }
@@ -87,6 +92,10 @@ public class ChatListener {
 
         public MuteContainer() {
             type = MuteType.NOT_MUTED;
+        }
+
+        public MuteContainer(boolean muted) {
+            type = muted ? MuteType.MUTED : MuteType.NOT_MUTED;
         }
 
         public MuteType getType() {

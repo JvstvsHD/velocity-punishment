@@ -19,7 +19,7 @@ import de.jvstvshd.velocitypunishment.message.ResourceBundleMessageProvider;
 import de.jvstvshd.velocitypunishment.punishment.PunishmentManager;
 import de.jvstvshd.velocitypunishment.punishment.impl.DefaultPlayerResolver;
 import de.jvstvshd.velocitypunishment.punishment.impl.DefaultPunishmentManager;
-import de.jvstvshd.velocitypunishment.util.PlayerResolver;
+import de.jvstvshd.velocitypunishment.punishment.util.PlayerResolver;
 import org.slf4j.Logger;
 
 import java.io.IOException;
@@ -73,7 +73,7 @@ public class VelocityPunishmentPlugin {
     private void setup(CommandManager commandManager, EventManager eventManager) {
         ChatListener chatListener = new ChatListener(this);
 
-        eventManager.register(this, new ConnectListener(punishmentManager, Executors.newCachedThreadPool(), server, chatListener));
+        eventManager.register(this, new ConnectListener(this, Executors.newCachedThreadPool(), server, chatListener));
         eventManager.register(this, chatListener);
 
         commandManager.register(commandManager.metaBuilder("ban").build(), new BanCommand(this));

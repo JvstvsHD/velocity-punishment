@@ -3,7 +3,7 @@ package de.jvstvshd.velocitypunishment.punishment.impl;
 import de.jvstvshd.velocitypunishment.punishment.PunishmentDuration;
 import de.jvstvshd.velocitypunishment.punishment.PunishmentManager;
 import de.jvstvshd.velocitypunishment.punishment.TemporalPunishment;
-import de.jvstvshd.velocitypunishment.util.PlayerResolver;
+import de.jvstvshd.velocitypunishment.punishment.util.PlayerResolver;
 import net.kyori.adventure.text.Component;
 
 import javax.sql.DataSource;

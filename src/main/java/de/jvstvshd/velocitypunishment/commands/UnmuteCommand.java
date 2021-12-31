@@ -3,11 +3,11 @@ package de.jvstvshd.velocitypunishment.commands;
 import com.google.common.collect.ImmutableList;
 import com.velocitypowered.api.command.SimpleCommand;
 import de.jvstvshd.velocitypunishment.VelocityPunishmentPlugin;
+import de.jvstvshd.velocitypunishment.internal.PunishmentHelper;
+import de.jvstvshd.velocitypunishment.internal.Util;
 import de.jvstvshd.velocitypunishment.listener.ChatListener;
 import de.jvstvshd.velocitypunishment.punishment.Punishment;
-import de.jvstvshd.velocitypunishment.punishment.PunishmentHelper;
 import de.jvstvshd.velocitypunishment.punishment.StandardPunishmentType;
-import de.jvstvshd.velocitypunishment.util.Util;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.event.ClickEvent;
 import net.kyori.adventure.text.event.HoverEvent;
@@ -44,14 +44,14 @@ public class UnmuteCommand implements SimpleCommand {
     @Override
     public void execute(Invocation invocation) {
         if (invocation.arguments().length < 1) {
-            invocation.source().sendMessage(Component.text("Please use /unmute <player>").color(NamedTextColor.DARK_RED));
+            invocation.source().sendMessage(plugin.getMessageProvider().provide("command.unmute.usage").color(NamedTextColor.RED));
             return;
         }
         var source = invocation.source();
         PunishmentHelper helper = new PunishmentHelper();
         helper.getPlayerUuid(0, service, plugin.getPlayerResolver(), invocation).whenCompleteAsync((uuid, throwable) -> {
             if (throwable != null) {
-                source.sendMessage(plugin.getMessageProvider().internalError(true));
+                source.sendMessage(plugin.getMessageProvider().internalError(source, true));
                 throwable.printStackTrace();
                 return;
             }
@@ -63,15 +63,15 @@ public class UnmuteCommand implements SimpleCommand {
             plugin.getPunishmentManager().getPunishments(uuid, service, StandardPunishmentType.MUTE, StandardPunishmentType.PERMANENT_MUTE).whenComplete((punishments, t) -> {
                 if (t != null) {
                     t.printStackTrace();
-                    invocation.source().sendMessage(plugin.getMessageProvider().internalError());
+                    invocation.source().sendMessage(plugin.getMessageProvider().internalError(source, true));
                     return;
                 }
                 if (punishments.isEmpty()) {
-                    invocation.source().sendMessage(Component.text("This player is not muted at the moment.").color(NamedTextColor.RED));
+                    invocation.source().sendMessage(plugin.getMessageProvider().provide("command.unmute.not-muted", source, true).color(NamedTextColor.RED));
                     return;
                 }
                 if (punishments.size() > 1) {
-                    invocation.source().sendMessage(Component.text("This player has multiple punishments with type (permanent) mute.").color(NamedTextColor.YELLOW));
+                    invocation.source().sendMessage(plugin.getMessageProvider().provide("command.unmute.multiple-mutes", source, true).color(NamedTextColor.YELLOW));
                     for (Punishment punishment : punishments) {
                         invocation.source().sendMessage(buildComponent(helper.buildPunishmentData(punishment, plugin.getMessageProvider(), source), punishment));
                     }
@@ -80,14 +80,14 @@ public class UnmuteCommand implements SimpleCommand {
                     punishment.cancel().whenCompleteAsync((unused, th) -> {
                         if (th != null) {
                             th.printStackTrace();
-                            invocation.source().sendMessage(plugin.getMessageProvider().internalError());
+                            invocation.source().sendMessage(plugin.getMessageProvider().internalError(source, true));
                             return;
                         }
-                        invocation.source().sendMessage(Component.text("The ban was annulled.").color(NamedTextColor.GREEN));
+                        invocation.source().sendMessage(Component.text("The mute was removed.").color(NamedTextColor.GREEN));
                         try {
                             chatListener.update(uuid);
                         } catch (ExecutionException | InterruptedException | TimeoutException e) {
-                            source.sendMessage(plugin.getMessageProvider().internalError());
+                            source.sendMessage(plugin.getMessageProvider().internalError(source, true));
                             e.printStackTrace();
                         }
                     });

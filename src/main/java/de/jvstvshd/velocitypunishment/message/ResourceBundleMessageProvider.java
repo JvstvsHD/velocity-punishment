@@ -2,22 +2,27 @@ package de.jvstvshd.velocitypunishment.message;
 
 import com.velocitypowered.api.command.CommandSource;
 import com.velocitypowered.api.proxy.Player;
+import de.jvstvshd.velocitypunishment.VelocityPunishmentPlugin;
 import de.jvstvshd.velocitypunishment.config.ConfigData;
 import net.kyori.adventure.key.Key;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.TextComponent;
-import net.kyori.adventure.text.format.NamedTextColor;
+import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
 import net.kyori.adventure.translation.GlobalTranslator;
 import net.kyori.adventure.translation.TranslationRegistry;
 import net.kyori.adventure.translation.Translator;
 import org.jetbrains.annotations.NotNull;
 
+import java.io.File;
 import java.io.IOException;
+import java.net.URISyntaxException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Locale;
 import java.util.Objects;
 import java.util.PropertyResourceBundle;
+import java.util.jar.JarEntry;
+import java.util.jar.JarFile;
 import java.util.stream.Stream;
 
 @SuppressWarnings("ClassCanBeRecord")
@@ -26,17 +31,12 @@ public class ResourceBundleMessageProvider implements MessageProvider {
     private final ConfigData configData;
     private LocaleProvider localeProvider;
 
-    public ResourceBundleMessageProvider(@NotNull ConfigData configData) {
-        this.configData = configData;
-        this.localeProvider = new LocaleProvider(configData);
-        load();
-    }
-
-    private void load() {
+    static {
         try {
             var registry = TranslationRegistry.create(Key.key("velocity-punishment"));
-            registry.defaultLocale(configData.getDefaultLanguage());
-            try (Stream<Path> paths = Files.list(Path.of("plugins", "velocity-punishment", "translations"))) {
+            registry.defaultLocale(Locale.ENGLISH);
+            var baseDir = Path.of("plugins", "velocity-punishment", "translations");
+            try (Stream<Path> paths = Files.list(baseDir)) {
                 paths.filter(path -> path.getFileName().toString().endsWith(".properties")).forEach(path -> {
                     PropertyResourceBundle resource;
                     try {
@@ -47,35 +47,60 @@ public class ResourceBundleMessageProvider implements MessageProvider {
                         e.printStackTrace();
                     }
                 });
+
+                JarFile jar = new JarFile(new File(VelocityPunishmentPlugin.class.getProtectionDomain().getCodeSource().getLocation().toURI()));
+                for (JarEntry translationEntry : jar.stream().filter(jarEntry -> jarEntry.getName().toLowerCase().contains("translations") && !jarEntry.isDirectory()).toList()) {
+                    var path = Path.of(baseDir.toString(), translationEntry.getName().split("/")[1]);
+                    if (Files.exists(path)) {
+                        continue;
+                    }
+                    System.out.println("copying translation file " + translationEntry.getName());
+                    Files.copy(Objects.requireNonNull(VelocityPunishmentPlugin.class.getResourceAsStream("/" + translationEntry.getName())), path);
+                }
             }
             GlobalTranslator.get().addSource(registry);
-        } catch (IOException e) {
+        } catch (IOException | URISyntaxException e) {
             e.printStackTrace();
         }
     }
 
-    private Component standard(String key, Component def) {
-        var rendered = GlobalTranslator.render(Component.translatable(key), configData.getDefaultLanguage());
-        if (rendered instanceof TextComponent text && text.content().equalsIgnoreCase(key)) {
-            return def;
+    public ResourceBundleMessageProvider(@NotNull ConfigData configData) {
+        this.configData = configData;
+        this.localeProvider = new LocaleProvider(configData);
+    }
+
+    @Override
+    public @NotNull Component prefix() {
+        return standard("prefix", Locale.ROOT);
+    }
+
+    private Component standard(String key, CommandSource source) {
+        var configLocale = configData.getForcedLanguage();
+        var locale = configLocale == null ? localeProvider.provideLocale(source) : configLocale;
+        return standard(key, locale);
+    }
+
+    private Component standard(String key, Locale locale) {
+        if (locale == null) {
+            locale = Locale.ENGLISH;
+        }
+        var rendered = GlobalTranslator.render(Component.translatable(key), locale);
+        if (rendered instanceof TextComponent textComponent) {
+            return LegacyComponentSerializer.legacyAmpersand().deserialize(textComponent.content());
         }
         return rendered;
     }
 
     @Override
     public @NotNull
-    Component internalError() {
-        return standard("error.internal", Component.text("An internal error occurred. Please contact the network administrator.")
-                .color(NamedTextColor.DARK_RED));
+    Component internalError(CommandSource source) {
+        return standard("error.internal", source);
     }
 
     @Override
     public @NotNull
-    Component prefix() {
-        return standard("prefix", Component.text()
-                .append(Component.text("[").color(NamedTextColor.GRAY))
-                .append(Component.text("Punishment").color(NamedTextColor.YELLOW))
-                .append(Component.text("] ").color(NamedTextColor.GRAY)).build());
+    Component prefix(CommandSource source) {
+        return standard("prefix", source);
     }
 
 
@@ -90,32 +115,32 @@ public class ResourceBundleMessageProvider implements MessageProvider {
     Component provide(String key, Component... args) {
         Objects.requireNonNull(key, "key may not be null");
         var translatable = Component.translatable(key, args);
-        if (configData.isForceUsingDefaultLanguage()) {
-            return GlobalTranslator.render(translatable, configData.getDefaultLanguage());
+        if (configData.getForcedLanguage() != null) {
+            return GlobalTranslator.render(translatable, configData.getForcedLanguage());
         }
         return translatable;
     }
 
 
-    private Component withPrefix(Component message) {
+    private Component withPrefix(Component message, CommandSource source) {
         Objects.requireNonNull(message);
-        return Component.text().append(prefix(), message).build();
+        return Component.text().append(prefix(source), message).build();
     }
 
     @Override
     public @NotNull
-    Component internalError(boolean withPrefix) {
+    Component internalError(CommandSource source, boolean withPrefix) {
         if (withPrefix) {
-            return withPrefix(internalError());
+            return withPrefix(internalError(source), source);
         }
-        return internalError();
+        return internalError(source);
     }
 
     @Override
     public @NotNull
     Component provide(String key, CommandSource source, boolean withPrefix, Component... args) {
         if (withPrefix) {
-            return withPrefix(provide(key, source, args));
+            return withPrefix(provide(key, source, args), source);
         }
         return provide(key, source, args);
     }
@@ -136,14 +161,13 @@ public class ResourceBundleMessageProvider implements MessageProvider {
         }
 
         public Locale provideLocale(CommandSource source) {
-            if (configData.isForceUsingDefaultLanguage()) {
-                return configData.getDefaultLanguage();
+            if (configData.getForcedLanguage() != null) {
+                return configData.getForcedLanguage();
             }
             if (source instanceof Player player) {
                 return player.getEffectiveLocale();
             }
-            //TODO: Implement correct locale
-            return Locale.ENGLISH;
+            return Locale.getDefault();
         }
     }
 }

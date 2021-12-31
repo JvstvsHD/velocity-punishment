@@ -1,9 +1,9 @@
 package de.jvstvshd.velocitypunishment.punishment.impl;
 
 import com.velocitypowered.api.proxy.Player;
+import de.jvstvshd.velocitypunishment.internal.Util;
 import de.jvstvshd.velocitypunishment.punishment.*;
-import de.jvstvshd.velocitypunishment.util.PlayerResolver;
-import de.jvstvshd.velocitypunishment.util.Util;
+import de.jvstvshd.velocitypunishment.punishment.util.PlayerResolver;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.format.TextDecoration;

@@ -1,10 +1,12 @@
-package de.jvstvshd.velocitypunishment.punishment;
+package de.jvstvshd.velocitypunishment.internal;
 
 import com.velocitypowered.api.command.CommandSource;
 import com.velocitypowered.api.command.SimpleCommand;
 import de.jvstvshd.velocitypunishment.message.MessageProvider;
-import de.jvstvshd.velocitypunishment.util.PlayerResolver;
-import de.jvstvshd.velocitypunishment.util.Util;
+import de.jvstvshd.velocitypunishment.punishment.Punishment;
+import de.jvstvshd.velocitypunishment.punishment.PunishmentDuration;
+import de.jvstvshd.velocitypunishment.punishment.TemporalPunishment;
+import de.jvstvshd.velocitypunishment.punishment.util.PlayerResolver;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.TextComponent;
 import net.kyori.adventure.text.format.NamedTextColor;
@@ -45,7 +47,7 @@ public class PunishmentHelper {
                 .build();
     }
 
-    public Optional<PunishmentDuration> parseDuration(int argumentIndex, SimpleCommand.Invocation invocation) {
+    public Optional<PunishmentDuration> parseDuration(int argumentIndex, SimpleCommand.Invocation invocation, MessageProvider provider) {
         try {
             return Optional.ofNullable(PunishmentDuration.parse(invocation.arguments()[argumentIndex]));
         } catch (IllegalArgumentException e) {
@@ -53,7 +55,7 @@ public class PunishmentHelper {
                     Component.text(e.getMessage()).color(NamedTextColor.YELLOW)));
             return Optional.empty();
         } catch (Exception e) {
-            invocation.source().sendMessage(Util.INTERNAL_ERROR);
+            invocation.source().sendMessage(provider.internalError(invocation.source(), true));
             throw new RuntimeException(e);
         }
     }

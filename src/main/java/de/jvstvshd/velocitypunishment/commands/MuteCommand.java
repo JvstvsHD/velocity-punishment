@@ -4,10 +4,10 @@ import com.google.common.collect.ImmutableList;
 import com.velocitypowered.api.command.CommandSource;
 import com.velocitypowered.api.command.SimpleCommand;
 import de.jvstvshd.velocitypunishment.VelocityPunishmentPlugin;
+import de.jvstvshd.velocitypunishment.internal.PunishmentHelper;
+import de.jvstvshd.velocitypunishment.internal.Util;
 import de.jvstvshd.velocitypunishment.listener.ChatListener;
 import de.jvstvshd.velocitypunishment.punishment.Mute;
-import de.jvstvshd.velocitypunishment.punishment.PunishmentHelper;
-import de.jvstvshd.velocitypunishment.util.Util;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.TextComponent;
 import net.kyori.adventure.text.format.NamedTextColor;
@@ -16,9 +16,9 @@ import net.kyori.adventure.text.format.TextDecoration;
 import java.util.List;
 import java.util.stream.Collectors;
 
-import static de.jvstvshd.velocitypunishment.util.Util.INTERNAL_ERROR;
-import static de.jvstvshd.velocitypunishment.util.Util.copyComponent;
+import static de.jvstvshd.velocitypunishment.internal.Util.copyComponent;
 
+@SuppressWarnings("ClassCanBeRecord")
 public class MuteCommand implements SimpleCommand {
 
     private final VelocityPunishmentPlugin plugin;
@@ -41,7 +41,7 @@ public class MuteCommand implements SimpleCommand {
         PunishmentHelper parser = new PunishmentHelper();
         playerResolver.getOrQueryPlayerUuid(invocation.arguments()[0], plugin.getService()).whenCompleteAsync((uuid, throwable) -> {
             if (throwable != null) {
-                source.sendMessage(INTERNAL_ERROR);
+                source.sendMessage(plugin.getMessageProvider().internalError(source, true));
                 throwable.printStackTrace();
                 return;
             }
@@ -53,7 +53,7 @@ public class MuteCommand implements SimpleCommand {
             punishmentManager.createPermanentMute(uuid, reason).punish().whenComplete((mute, t) -> {
                 if (t != null) {
                     t.printStackTrace();
-                    source.sendMessage(Util.INTERNAL_ERROR);
+                    source.sendMessage(plugin.getMessageProvider().internalError(source, true));
                 } else {
                     String uuidString = uuid.toString().toLowerCase();
                     source.sendMessage(plugin.getMessageProvider().provide("command.mute.success", source, true, copyComponent(invocation.arguments()[0]).color(NamedTextColor.YELLOW).decorate(TextDecoration.BOLD),

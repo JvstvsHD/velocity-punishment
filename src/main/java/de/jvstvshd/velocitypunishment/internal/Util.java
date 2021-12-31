@@ -1,4 +1,4 @@
-package de.jvstvshd.velocitypunishment.util;
+package de.jvstvshd.velocitypunishment.internal;
 
 import com.google.common.collect.Sets;
 import com.velocitypowered.api.proxy.Player;
@@ -23,11 +23,6 @@ import java.util.stream.Collector;
 import java.util.stream.Collectors;
 
 public class Util {
-
-    @Deprecated(forRemoval = true, since = "1.0.0-beta.2")
-    public static final TextComponent INTERNAL_ERROR =
-            Component.text("An internal error occurred. Please contact the network administrator.")
-                    .color(NamedTextColor.DARK_RED);
 
     public static List<String> getPlayerNames(Collection<Player> players) {
         return players.stream().collect(new Collector<Player, List<Player>, List<String>>() {

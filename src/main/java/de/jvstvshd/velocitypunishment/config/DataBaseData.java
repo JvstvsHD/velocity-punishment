@@ -27,6 +27,4 @@ public class DataBaseData {
     public String getPort() {
         return port;
     }
-
-
 }

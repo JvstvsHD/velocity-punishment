@@ -15,7 +15,7 @@ import java.util.concurrent.CompletableFuture;
  *     PunishmentManager punishmentManager;
  *     //the uuid of the player, for example either from Player#getUniqueId() or from PlayerResolver#getOrQueryPlayerUuid(String, Executor)
  *     UUID playerUuid;
- *     //parse the duration of the punishment from a string in the format [number, ranging from 0 to Long.MAX_VALUE] and one char for s[econd], m[inute], h[our], d[ay].
+ *     //parse the duration of the punishment from a string in the format [number, ranging from 0 to Long.MAX_VALUE] and one char for s [second], m[minute], h[our], d[ay].
  *     PunishmentDuration duration = PunishmentDuration.parse("1d");
  *     //Create a reason as an adventure component.
  *     Component reason = Component.text("You are banned from this server!");

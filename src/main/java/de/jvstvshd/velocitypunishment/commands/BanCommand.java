@@ -4,8 +4,8 @@ import com.google.common.collect.ImmutableList;
 import com.velocitypowered.api.command.CommandSource;
 import com.velocitypowered.api.command.SimpleCommand;
 import de.jvstvshd.velocitypunishment.VelocityPunishmentPlugin;
-import de.jvstvshd.velocitypunishment.punishment.PunishmentHelper;
-import de.jvstvshd.velocitypunishment.util.Util;
+import de.jvstvshd.velocitypunishment.internal.PunishmentHelper;
+import de.jvstvshd.velocitypunishment.internal.Util;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.TextComponent;
 import net.kyori.adventure.text.format.NamedTextColor;
@@ -14,8 +14,9 @@ import net.kyori.adventure.text.format.TextDecoration;
 import java.util.List;
 import java.util.stream.Collectors;
 
-import static de.jvstvshd.velocitypunishment.util.Util.copyComponent;
+import static de.jvstvshd.velocitypunishment.internal.Util.copyComponent;
 
+@SuppressWarnings("ClassCanBeRecord")
 public class BanCommand implements SimpleCommand {
 
     private final VelocityPunishmentPlugin plugin;
@@ -36,7 +37,7 @@ public class BanCommand implements SimpleCommand {
         var parser = new PunishmentHelper();
         playerResolver.getOrQueryPlayerUuid(invocation.arguments()[0], plugin.getService()).whenCompleteAsync((uuid, throwable) -> {
             if (throwable != null) {
-                source.sendMessage(plugin.getMessageProvider().internalError());
+                source.sendMessage(plugin.getMessageProvider().internalError(source, true));
                 throwable.printStackTrace();
                 return;
             }
@@ -48,7 +49,7 @@ public class BanCommand implements SimpleCommand {
             punishmentManager.createPermanentBan(uuid, component).punish().whenCompleteAsync((ban, t) -> {
                 if (t != null) {
                     t.printStackTrace();
-                    source.sendMessage(plugin.getMessageProvider().internalError());
+                    source.sendMessage(plugin.getMessageProvider().internalError(source, true));
                 } else {
                     String uuidString = uuid.toString().toLowerCase();
                     source.sendMessage(plugin.getMessageProvider().provide("command.ban.success", source, true, copyComponent(invocation.arguments()[0]).color(NamedTextColor.YELLOW).decorate(TextDecoration.BOLD),

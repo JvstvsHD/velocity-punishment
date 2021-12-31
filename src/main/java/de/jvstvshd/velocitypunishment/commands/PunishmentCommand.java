@@ -5,10 +5,10 @@ import com.velocitypowered.api.command.CommandSource;
 import com.velocitypowered.api.command.SimpleCommand;
 import com.velocitypowered.api.proxy.ProxyServer;
 import de.jvstvshd.velocitypunishment.VelocityPunishmentPlugin;
+import de.jvstvshd.velocitypunishment.internal.PunishmentHelper;
+import de.jvstvshd.velocitypunishment.internal.Util;
 import de.jvstvshd.velocitypunishment.listener.ChatListener;
 import de.jvstvshd.velocitypunishment.punishment.Punishment;
-import de.jvstvshd.velocitypunishment.punishment.PunishmentHelper;
-import de.jvstvshd.velocitypunishment.util.Util;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.event.ClickEvent;
 import net.kyori.adventure.text.event.HoverEvent;
@@ -25,8 +25,6 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.TimeoutException;
-
-import static de.jvstvshd.velocitypunishment.util.Util.INTERNAL_ERROR;
 
 public class PunishmentCommand implements SimpleCommand {
 
@@ -67,7 +65,7 @@ public class PunishmentCommand implements SimpleCommand {
             PunishmentHelper helper = new PunishmentHelper();
             helper.getPlayerUuid(1, service, playerResolver, invocation).whenCompleteAsync((uuid, throwable) -> {
                 if (throwable != null) {
-                    source.sendMessage(plugin.getMessageProvider().internalError());
+                    source.sendMessage(plugin.getMessageProvider().internalError(source, true));
                     throwable.printStackTrace();
                     return;
                 }
@@ -77,7 +75,7 @@ public class PunishmentCommand implements SimpleCommand {
                 }
                 punishmentManager.getPunishments(uuid, service).whenComplete((punishments, t) -> {
                     if (t != null) {
-                        source.sendMessage(plugin.getMessageProvider().internalError());
+                        source.sendMessage(plugin.getMessageProvider().internalError(source, true));
                         t.printStackTrace();
                         return;
                     }
@@ -108,7 +106,7 @@ public class PunishmentCommand implements SimpleCommand {
         punishmentManager.getPunishment(uuid, service).whenCompleteAsync((optional, throwable) -> {
             if (throwable != null) {
                 throwable.printStackTrace();
-                source.sendMessage(Util.INTERNAL_ERROR);
+                source.sendMessage(plugin.getMessageProvider().internalError(source, true));
                 return;
             }
             Punishment punishment;
@@ -122,14 +120,14 @@ public class PunishmentCommand implements SimpleCommand {
                 case "cancel", "remove" -> punishment.cancel().whenCompleteAsync((unused, t) -> {
                     if (t != null) {
                         t.printStackTrace();
-                        source.sendMessage(Util.INTERNAL_ERROR);
+                        source.sendMessage(plugin.getMessageProvider().internalError(source, true));
                         return;
                     }
                     source.sendMessage(plugin.getMessageProvider().provide("punishment.remove", source, true).color(NamedTextColor.GREEN));
                     try {
                         chatListener.update(uuid);
                     } catch (ExecutionException | InterruptedException | TimeoutException e) {
-                        source.sendMessage(INTERNAL_ERROR);
+                        source.sendMessage(plugin.getMessageProvider().internalError(source, true));
                         e.printStackTrace();
                     }
                 });
@@ -169,7 +167,7 @@ public class PunishmentCommand implements SimpleCommand {
         if (arguments.length == 0) {
             return ALL_OPTIONS;
         } else if (arguments.length == 1 && arguments[0].toLowerCase(Locale.ROOT).startsWith("p")) {
-            return ALL_OPTIONS.stream().filter(s -> s.toLowerCase(Locale.ROOT).startsWith(arguments[1].toLowerCase(Locale.ROOT))).toList();
+            return ALL_OPTIONS.stream().filter(s -> s.toLowerCase(Locale.ROOT).startsWith(arguments[0].toLowerCase(Locale.ROOT))).toList();
         }
         return new ArrayList<>();
     }

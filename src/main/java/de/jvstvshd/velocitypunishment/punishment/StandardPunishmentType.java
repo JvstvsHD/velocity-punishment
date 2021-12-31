@@ -20,11 +20,6 @@ public enum StandardPunishmentType implements PunishmentType {
         return isPermanent;
     }
 
-    @Deprecated(forRemoval = true)
-    public String getTypeString() {
-        return typeString;
-    }
-
     @Override
     public String getName() {
         return typeString;

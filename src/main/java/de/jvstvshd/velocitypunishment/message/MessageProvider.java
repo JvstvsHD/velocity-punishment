@@ -7,7 +7,10 @@ import org.jetbrains.annotations.NotNull;
 public interface MessageProvider {
 
     @NotNull
-    Component internalError();
+    Component internalError(CommandSource source);
+
+    @NotNull
+    Component prefix(CommandSource source);
 
     @NotNull
     Component prefix();
@@ -19,7 +22,7 @@ public interface MessageProvider {
     Component provide(String key, Component... args);
 
     @NotNull
-    Component internalError(boolean withPrefix);
+    Component internalError(CommandSource source, boolean withPrefix);
 
     @NotNull
     Component provide(String key, CommandSource source, boolean withPrefix, Component... args);

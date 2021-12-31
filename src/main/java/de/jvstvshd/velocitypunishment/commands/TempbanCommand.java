@@ -5,9 +5,9 @@ import com.velocitypowered.api.command.CommandSource;
 import com.velocitypowered.api.command.SimpleCommand;
 import com.velocitypowered.api.proxy.ProxyServer;
 import de.jvstvshd.velocitypunishment.VelocityPunishmentPlugin;
+import de.jvstvshd.velocitypunishment.internal.PunishmentHelper;
+import de.jvstvshd.velocitypunishment.internal.Util;
 import de.jvstvshd.velocitypunishment.punishment.PunishmentDuration;
-import de.jvstvshd.velocitypunishment.punishment.PunishmentHelper;
-import de.jvstvshd.velocitypunishment.util.Util;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.TextComponent;
 import net.kyori.adventure.text.format.NamedTextColor;
@@ -19,7 +19,7 @@ import java.util.Optional;
 import java.util.concurrent.ExecutorService;
 import java.util.stream.Collectors;
 
-import static de.jvstvshd.velocitypunishment.util.Util.copyComponent;
+import static de.jvstvshd.velocitypunishment.internal.Util.copyComponent;
 
 public class TempbanCommand implements SimpleCommand {
 
@@ -43,7 +43,7 @@ public class TempbanCommand implements SimpleCommand {
         PunishmentHelper parser = new PunishmentHelper();
         plugin.getPlayerResolver().getOrQueryPlayerUuid(invocation.arguments()[0], service).whenCompleteAsync((uuid, throwable) -> {
             if (throwable != null) {
-                source.sendMessage(plugin.getMessageProvider().internalError());
+                source.sendMessage(plugin.getMessageProvider().internalError(source, true));
                 throwable.printStackTrace();
                 return;
             }
@@ -51,7 +51,7 @@ public class TempbanCommand implements SimpleCommand {
                 source.sendMessage(plugin.getMessageProvider().provide("commands.general.not-found", source, true, Component.text(invocation.arguments()[0]).color(NamedTextColor.YELLOW)).color(NamedTextColor.RED));
                 return;
             }
-            Optional<PunishmentDuration> optDuration = parser.parseDuration(1, invocation);
+            Optional<PunishmentDuration> optDuration = parser.parseDuration(1, invocation, plugin.getMessageProvider());
             if (optDuration.isEmpty()) {
                 return;
             }
@@ -59,7 +59,7 @@ public class TempbanCommand implements SimpleCommand {
             TextComponent component = parser.parseComponent(2, invocation, Component.text("ban").color(NamedTextColor.DARK_RED));
             plugin.getPunishmentManager().createBan(uuid, component, duration).punish().whenComplete((ban, t) -> {
                 if (t != null) {
-                    invocation.source().sendMessage(plugin.getMessageProvider().internalError());
+                    invocation.source().sendMessage(plugin.getMessageProvider().internalError(source, true));
                     t.printStackTrace();
                     return;
                 }
