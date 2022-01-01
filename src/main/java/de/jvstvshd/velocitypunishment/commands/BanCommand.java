@@ -52,10 +52,10 @@ public class BanCommand implements SimpleCommand {
                     source.sendMessage(plugin.getMessageProvider().internalError(source, true));
                 } else {
                     String uuidString = uuid.toString().toLowerCase();
-                    source.sendMessage(plugin.getMessageProvider().provide("command.ban.success", source, true, copyComponent(invocation.arguments()[0]).color(NamedTextColor.YELLOW).decorate(TextDecoration.BOLD),
-                            copyComponent(uuidString).color(NamedTextColor.YELLOW).decorate(TextDecoration.BOLD),
+                    source.sendMessage(plugin.getMessageProvider().provide("command.ban.success", source, true, copyComponent(invocation.arguments()[0], plugin.getMessageProvider(), source).color(NamedTextColor.YELLOW).decorate(TextDecoration.BOLD),
+                            copyComponent(uuidString, plugin.getMessageProvider(), source).color(NamedTextColor.YELLOW).decorate(TextDecoration.BOLD),
                             component).color(NamedTextColor.GREEN));
-                    source.sendMessage(plugin.getMessageProvider().provide("commands.general.punishment.id", source, true, copyComponent(ban.getPunishmentUuid().toString().toLowerCase()).color(NamedTextColor.YELLOW)));
+                    source.sendMessage(plugin.getMessageProvider().provide("commands.general.punishment.id", source, true, copyComponent(ban.getPunishmentUuid().toString().toLowerCase(), plugin.getMessageProvider(), source).color(NamedTextColor.YELLOW)));
                 }
             });
         }, plugin.getService());

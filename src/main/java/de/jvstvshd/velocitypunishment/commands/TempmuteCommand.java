@@ -7,6 +7,7 @@ import com.velocitypowered.api.proxy.ProxyServer;
 import de.jvstvshd.velocitypunishment.VelocityPunishmentPlugin;
 import de.jvstvshd.velocitypunishment.internal.PunishmentHelper;
 import de.jvstvshd.velocitypunishment.internal.Util;
+import de.jvstvshd.velocitypunishment.listener.ChatListener;
 import de.jvstvshd.velocitypunishment.punishment.PunishmentDuration;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.TextComponent;
@@ -16,7 +17,9 @@ import net.kyori.adventure.text.format.TextDecoration;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.Optional;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
+import java.util.concurrent.TimeoutException;
 import java.util.stream.Collectors;
 
 import static de.jvstvshd.velocitypunishment.internal.Util.copyComponent;
@@ -26,11 +29,13 @@ public class TempmuteCommand implements SimpleCommand {
     private final ProxyServer proxyServer;
     private final ExecutorService service;
     private final VelocityPunishmentPlugin plugin;
+    private final ChatListener chatListener;
 
-    public TempmuteCommand(VelocityPunishmentPlugin plugin) {
+    public TempmuteCommand(VelocityPunishmentPlugin plugin, ChatListener chatListener) {
         this.proxyServer = plugin.getServer();
         this.service = plugin.getService();
         this.plugin = plugin;
+        this.chatListener = chatListener;
     }
 
     @Override
@@ -66,11 +71,16 @@ public class TempmuteCommand implements SimpleCommand {
                 String until = duration.expiration().format(DateTimeFormatter.ofPattern("dd.MM.yyyy HH:mm:ss"));
                 String uuidString = uuid.toString().toLowerCase();
                 source.sendMessage(plugin.getMessageProvider().provide("command.tempmute.success", source, true,
-                        copyComponent(invocation.arguments()[0]).color(NamedTextColor.YELLOW).decorate(TextDecoration.BOLD),
-                        copyComponent(uuidString).color(NamedTextColor.RED).decorate(TextDecoration.BOLD),
+                        copyComponent(invocation.arguments()[0], plugin.getMessageProvider(), source).color(NamedTextColor.YELLOW).decorate(TextDecoration.BOLD),
+                        copyComponent(uuidString, plugin.getMessageProvider(), source).color(NamedTextColor.RED).decorate(TextDecoration.BOLD),
                         component,
                         Component.text(until).color(NamedTextColor.GREEN)));
-                source.sendMessage(plugin.getMessageProvider().provide("commands.general.punishment.id", source, true, copyComponent(mute.getPunishmentUuid().toString().toLowerCase()).color(NamedTextColor.YELLOW)));
+                source.sendMessage(plugin.getMessageProvider().provide("commands.general.punishment.id", source, true, copyComponent(mute.getPunishmentUuid().toString().toLowerCase(), plugin.getMessageProvider(), source).color(NamedTextColor.YELLOW)));
+                try {
+                    chatListener.update(uuid);
+                } catch (ExecutionException | TimeoutException | InterruptedException e) {
+                    e.printStackTrace();
+                }
             });
         }, service);
     }

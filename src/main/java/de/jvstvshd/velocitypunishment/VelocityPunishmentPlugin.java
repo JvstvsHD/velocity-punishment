@@ -81,7 +81,7 @@ public class VelocityPunishmentPlugin {
         commandManager.register(commandManager.metaBuilder("unban").build(), new UnbanCommand(this));
         commandManager.register(commandManager.metaBuilder("punishment").build(), new PunishmentCommand(this, chatListener));
         commandManager.register(commandManager.metaBuilder("mute").build(), new MuteCommand(this, chatListener));
-        commandManager.register(commandManager.metaBuilder("tempmute").build(), new TempmuteCommand(this));
+        commandManager.register(commandManager.metaBuilder("tempmute").build(), new TempmuteCommand(this, chatListener));
         commandManager.register(commandManager.metaBuilder("unmute").build(), new UnmuteCommand(this, chatListener));
     }
 

@@ -7,13 +7,14 @@ import de.jvstvshd.velocitypunishment.VelocityPunishmentPlugin;
 import de.jvstvshd.velocitypunishment.internal.PunishmentHelper;
 import de.jvstvshd.velocitypunishment.internal.Util;
 import de.jvstvshd.velocitypunishment.listener.ChatListener;
-import de.jvstvshd.velocitypunishment.punishment.Mute;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.TextComponent;
 import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.format.TextDecoration;
 
 import java.util.List;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeoutException;
 import java.util.stream.Collectors;
 
 import static de.jvstvshd.velocitypunishment.internal.Util.copyComponent;
@@ -56,13 +57,17 @@ public class MuteCommand implements SimpleCommand {
                     source.sendMessage(plugin.getMessageProvider().internalError(source, true));
                 } else {
                     String uuidString = uuid.toString().toLowerCase();
-                    source.sendMessage(plugin.getMessageProvider().provide("command.mute.success", source, true, copyComponent(invocation.arguments()[0]).color(NamedTextColor.YELLOW).decorate(TextDecoration.BOLD),
-                            copyComponent(uuidString).color(NamedTextColor.YELLOW).decorate(TextDecoration.BOLD),
+                    source.sendMessage(plugin.getMessageProvider().provide("command.mute.success", source, true, copyComponent(invocation.arguments()[0], plugin.getMessageProvider(), source).color(NamedTextColor.YELLOW).decorate(TextDecoration.BOLD),
+                            copyComponent(uuidString, plugin.getMessageProvider(), source).color(NamedTextColor.YELLOW).decorate(TextDecoration.BOLD),
                             reason).color(NamedTextColor.GREEN));
-                    source.sendMessage(plugin.getMessageProvider().provide("commands.general.punishment.id", source, true, copyComponent(mute.getPunishmentUuid().toString().toLowerCase()).color(NamedTextColor.YELLOW)));
+                    source.sendMessage(plugin.getMessageProvider().provide("commands.general.punishment.id", source, true, copyComponent(mute.getPunishmentUuid().toString().toLowerCase(), plugin.getMessageProvider(), source).color(NamedTextColor.YELLOW)));
                 }
                 if (plugin.getServer().getPlayer(uuid).isPresent()) {
-                    chatListener.getMutes().put(uuid, new ChatListener.MuteContainer().setMute((Mute) mute));
+                    try {
+                        chatListener.update(uuid);
+                    } catch (ExecutionException | TimeoutException | InterruptedException e) {
+                        e.printStackTrace();
+                    }
                 }
             });
         }, plugin.getService());

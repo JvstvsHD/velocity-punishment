@@ -42,6 +42,7 @@ public record ConnectListener(VelocityPunishmentPlugin plugin,
         }
         Mute longestMute = Util.getLongestPunishment(mutes);
         if (longestMute != null) {
+            longestMute.getDuration().absolute();
             chatListener.getMutes().put(event.getPlayer().getUniqueId(), new ChatListener.MuteContainer(true).setMute(longestMute));
         }
         if (bans.isEmpty())

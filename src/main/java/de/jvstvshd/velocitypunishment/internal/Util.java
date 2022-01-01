@@ -1,7 +1,9 @@
 package de.jvstvshd.velocitypunishment.internal;
 
 import com.google.common.collect.Sets;
+import com.velocitypowered.api.command.CommandSource;
 import com.velocitypowered.api.proxy.Player;
+import de.jvstvshd.velocitypunishment.message.MessageProvider;
 import de.jvstvshd.velocitypunishment.punishment.Punishment;
 import de.jvstvshd.velocitypunishment.punishment.TemporalPunishment;
 import net.kyori.adventure.text.Component;
@@ -72,9 +74,9 @@ public class Util {
         }
     }
 
-    public static TextComponent copyComponent(String text) {
+    public static TextComponent copyComponent(String text, MessageProvider provider, CommandSource source) {
         return Component.text(text).clickEvent(ClickEvent.suggestCommand(text))
-                .hoverEvent((HoverEventSource<Component>) op -> HoverEvent.showText(Component.text("Copy to clipboard").color(NamedTextColor.GREEN)));
+                .hoverEvent((HoverEventSource<Component>) op -> HoverEvent.showText(provider.provide("commands.general.copy", source).color(NamedTextColor.GREEN)));
     }
 
     public static <T> CompletableFuture<T> executeAsync(Callable<T> task, Executor service) {

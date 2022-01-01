@@ -47,6 +47,22 @@ public class ChatListener {
                 event.getPlayer().sendMessage(Component.text("Please wait a moment...").color(NamedTextColor.GRAY));
                 return;
             }
+            if (!container.getMute().isOngoing()) {
+                container.setType(MuteType.LOADING);
+                container.getMute().cancel().whenCompleteAsync((punishment, throwable) -> {
+                    if (throwable != null) {
+                        throwable.printStackTrace();
+                        event.getPlayer().sendMessage(plugin.getMessageProvider().internalError(event.getPlayer(), true));
+                    }
+                    container.setMute(null);
+                    try {
+                        update(event.getPlayer().getUniqueId());
+                    } catch (ExecutionException | InterruptedException | TimeoutException e) {
+                        e.printStackTrace();
+                    }
+                });
+                return;
+            }
             event.setResult(PlayerChatEvent.ChatResult.denied());
             event.getPlayer().sendMessage(container.getMute().createFullReason(event.getPlayer()));
         } else {
@@ -67,7 +83,7 @@ public class ChatListener {
 
     public void update(UUID uuid) throws ExecutionException, InterruptedException, TimeoutException {
         List<Punishment> punishments = plugin.getPunishmentManager().getPunishments(uuid,
-                service, StandardPunishmentType.MUTE, StandardPunishmentType.PERMANENT_MUTE).get(5, TimeUnit.SECONDS);
+                service, StandardPunishmentType.MUTE, StandardPunishmentType.PERMANENT_MUTE).get(7, TimeUnit.SECONDS);
         if (!punishments.isEmpty()) {
             Mute mute = Util.getLongestPunishment(Util.convert(punishments));
             mutes.put(uuid, new MuteContainer().setMute(mute));

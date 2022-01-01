@@ -66,8 +66,8 @@ public class TempbanCommand implements SimpleCommand {
                 String until = duration.expiration().format(DateTimeFormatter.ofPattern("dd.MM.yyyy HH:mm:ss"));
                 String uuidString = uuid.toString().toLowerCase();
                 source.sendMessage(plugin.getMessageProvider().provide("command.tempban.success", source, true,
-                        copyComponent(invocation.arguments()[0]).color(NamedTextColor.YELLOW).decorate(TextDecoration.BOLD),
-                        copyComponent(uuidString).color(NamedTextColor.RED).decorate(TextDecoration.BOLD),
+                        copyComponent(invocation.arguments()[0], plugin.getMessageProvider(), source).color(NamedTextColor.YELLOW).decorate(TextDecoration.BOLD),
+                        copyComponent(uuidString, plugin.getMessageProvider(), source).color(NamedTextColor.RED).decorate(TextDecoration.BOLD),
                         component,
                         Component.text(until).color(NamedTextColor.GREEN)).color(NamedTextColor.GREEN));
                 source.sendMessage(plugin.getMessageProvider().provide("commands.general.punishment.id", source, true, Component.text(ban.getPunishmentUuid().toString().toLowerCase()).color(NamedTextColor.YELLOW)));

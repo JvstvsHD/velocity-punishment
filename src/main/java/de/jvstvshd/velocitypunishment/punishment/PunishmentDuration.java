@@ -16,16 +16,25 @@ import java.util.concurrent.TimeUnit;
 public class PunishmentDuration implements Comparable<PunishmentDuration> {
     private final Duration duration;
     private final boolean permanent;
+    private boolean relative = true;
+    private LocalDateTime fixedExpiration = null;
 
     private PunishmentDuration(Duration duration, boolean permanent) {
         this.duration = duration;
         this.permanent = permanent;
     }
 
+    public void absolute() {
+        fixedExpiration = expiration();
+        relative = false;
+    }
+
     public static PunishmentDuration fromTimestamp(Timestamp timestamp) {
         if (timestamp.equals(MAX))
             return permanent();
-        return new PunishmentDuration(Duration.between(Instant.now(), timestamp.toInstant()), false);
+        var duration = new PunishmentDuration(Duration.between(Instant.now(), timestamp.toInstant()), false);
+        duration.absolute();
+        return duration;
     }
 
     public static PunishmentDuration parse(String source) {
@@ -41,7 +50,10 @@ public class PunishmentDuration implements Comparable<PunishmentDuration> {
     }
 
     public LocalDateTime expiration() {
-        return LocalDateTime.now().plus(duration);
+        if (relative) {
+            return LocalDateTime.now().plus(duration);
+        }
+        return fixedExpiration;
     }
 
     public Timestamp timestampExpiration() {
