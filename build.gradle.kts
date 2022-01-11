@@ -23,10 +23,8 @@ subprojects {
 
 allprojects {
     license {
-        ignoreFailures(true)
         header(rootProject.file("HEADER.txt"))
         include("**/*.java")
-        skipExistingHeaders(true)
         newLine(true)
     }
 }

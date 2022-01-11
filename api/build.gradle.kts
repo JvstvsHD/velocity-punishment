@@ -15,10 +15,17 @@ dependencies {
     testRuntimeOnly("org.junit.jupiter:junit-jupiter-engine")
 }
 
-val repoUrl = "http://144.91.85.208/"
+java {
+    withJavadocJar()
+    withSourcesJar()
+}
 
 publishing {
+    val repoUrl = System.getenv("REPO_URL")
     publications.create<MavenPublication>("maven") {
+        artifact(project.tasks.getByName("jar"))
+        artifact(project.tasks.getByName("sourcesJar"))
+        artifact(project.tasks.getByName("javadocJar"))
         pom {
             name.set("Velocity Punishment API")
             description.set("API for punishing players via velocity")
