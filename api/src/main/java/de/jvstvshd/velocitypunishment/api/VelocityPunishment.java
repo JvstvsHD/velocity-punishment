@@ -31,6 +31,12 @@ import de.jvstvshd.velocitypunishment.api.punishment.util.PlayerResolver;
 
 import java.util.concurrent.ExecutorService;
 
+/**
+ * Core part of the velocity punishment api. Used to get and/or set components belonging to this api.
+ *
+ * @author JvstvsHD
+ * @version 1.0.0
+ */
 public interface VelocityPunishment {
 
     PunishmentManager getPunishmentManager();

@@ -168,7 +168,7 @@ public class DefaultPunishmentManager implements PunishmentManager {
     }
 
     @Override
-    public CompletableFuture<Boolean> isBanned(UUID playerUuid, Executor service) {
-        return executeAsync(() -> !getPunishments(playerUuid, service, StandardPunishmentType.BAN, StandardPunishmentType.PERMANENT_BAN).get().isEmpty(), service);
+    public CompletableFuture<Boolean> isBanned(UUID playerUuid, Executor executor) {
+        return executeAsync(() -> !getPunishments(playerUuid, executor, StandardPunishmentType.BAN, StandardPunishmentType.PERMANENT_BAN).get().isEmpty(), executor);
     }
 }
