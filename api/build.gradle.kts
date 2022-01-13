@@ -2,7 +2,7 @@ plugins {
     java
 }
 
-group = "de.jvstvshd.punishment"
+group = "de.jvstvshd.punishment.velocity"
 version = "1.0.0"
 
 repositories {

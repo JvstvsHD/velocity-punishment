@@ -3,7 +3,7 @@ plugins {
     id("com.github.johnrengelman.shadow") version "7.1.2"
 }
 
-group = "de.jvstvshd.punishment"
+group = "de.jvstvshd.punishment.velocity"
 version = "1.0.0"
 
 repositories {

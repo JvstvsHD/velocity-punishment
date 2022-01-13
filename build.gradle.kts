@@ -6,7 +6,7 @@ plugins {
     id("org.cadixdev.licenser") version "0.6.1"
 }
 
-group = "de.jvstvshd.punishment"
+group = "de.jvstvshd.punishment.velocity"
 version = "1.0.0"
 
 subprojects {

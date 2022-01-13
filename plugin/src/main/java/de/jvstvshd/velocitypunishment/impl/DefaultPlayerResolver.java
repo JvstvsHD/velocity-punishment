@@ -29,6 +29,7 @@ import com.google.gson.JsonParser;
 import com.velocitypowered.api.proxy.Player;
 import com.velocitypowered.api.proxy.ProxyServer;
 import de.jvstvshd.velocitypunishment.api.punishment.util.PlayerResolver;
+import de.jvstvshd.velocitypunishment.internal.Util;
 import org.jetbrains.annotations.NotNull;
 
 import java.net.URI;
@@ -122,9 +123,13 @@ public class DefaultPlayerResolver implements PlayerResolver {
 
     @Override
     public CompletableFuture<UUID> getOrQueryPlayerUuid(@NotNull String name, @NotNull Executor executor) {
-        if (getPlayerUuid(name).isPresent()) {
-            return CompletableFuture.completedFuture(getPlayerUuid(name).get());
+        try {
+            return CompletableFuture.completedFuture(Util.parseUuid(name));
+        } catch (IllegalArgumentException e) {
+            if (getPlayerUuid(name).isPresent()) {
+                return CompletableFuture.completedFuture(getPlayerUuid(name).get());
+            }
+            return queryPlayerUuid(name, executor);
         }
-        return queryPlayerUuid(name, executor);
     }
 }

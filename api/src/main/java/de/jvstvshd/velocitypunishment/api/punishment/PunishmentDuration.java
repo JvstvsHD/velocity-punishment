@@ -24,19 +24,24 @@
 
 package de.jvstvshd.velocitypunishment.api.punishment;
 
+import com.google.common.annotations.Beta;
 import org.jetbrains.annotations.NotNull;
 
 import java.sql.Timestamp;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDateTime;
-import java.time.OffsetDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.TimeUnit;
 
+/**
+ * Class holding the duration and expiration date of a punishment.
+ *
+ * @see #parse(String)
+ */
 public class PunishmentDuration implements Comparable<PunishmentDuration> {
     private final Duration duration;
     private final boolean permanent;
@@ -48,11 +53,22 @@ public class PunishmentDuration implements Comparable<PunishmentDuration> {
         this.permanent = permanent;
     }
 
+    /**
+     * Makes this duration absolute, meaning the duration will not be added anymore. Instead, a fixed expiration date will be set.
+     */
     public void absolute() {
-        fixedExpiration = expiration();
-        relative = false;
+        synchronized (this) {
+            fixedExpiration = expiration();
+            relative = false;
+        }
     }
 
+    /**
+     * Converts the given {@link Timestamp} into a {@link PunishmentDuration}. The duration is absolute because it already was before.
+     *
+     * @param timestamp the timestamp which should be converted
+     * @return the converted duration
+     */
     public static PunishmentDuration fromTimestamp(Timestamp timestamp) {
         if (timestamp.equals(MAX))
             return permanent();
@@ -61,18 +77,40 @@ public class PunishmentDuration implements Comparable<PunishmentDuration> {
         return duration;
     }
 
+    /**
+     * Parses a string to a {@link PunishmentDuration} using {@link Parser}. More information about how a duration will be parsed can be found <a href="https://github.com/JvstvsHD/VelocityPunishment#duration">here</a>.
+     *
+     * @param source the source string.
+     * @return the parsed duration
+     * @see Parser#parse()
+     */
     public static PunishmentDuration parse(String source) {
         return new Parser(source).parse();
     }
 
+    /**
+     * Creates a new permanent (expiration date: 31.12.9999, 23:59:59) absolute punishment duration.
+     *
+     * @return a permanent duration
+     */
     public static PunishmentDuration permanent() {
-        return new PunishmentDuration(Duration.between(LocalDateTime.now(), MAX.toLocalDateTime()), true);
+        var duration = new PunishmentDuration(Duration.between(LocalDateTime.now(), MAX.toLocalDateTime()), true);
+        duration.absolute();
+        return duration;
     }
 
+    /**
+     * @return a new punishment duration whose duration is 0 seconds.
+     */
     public static PunishmentDuration zero() {
         return new PunishmentDuration(Duration.ofMillis(0), false);
     }
 
+    /**
+     * If this duration is relative ({@link #absolute()} was not called before), the created duration is now plus {@link #duration()}, otherwise the fixed expiration is returned.
+     *
+     * @return the expiration date of this punishment
+     */
     public LocalDateTime expiration() {
         if (relative) {
             return LocalDateTime.now().plus(duration);
@@ -80,10 +118,13 @@ public class PunishmentDuration implements Comparable<PunishmentDuration> {
         return fixedExpiration;
     }
 
+    /**
+     * @return the {@link #expiration()} date as {@link Timestamp} or {@link #MAX} if it is permanent
+     */
     public Timestamp timestampExpiration() {
         if (permanent)
             return MAX;
-        return Timestamp.from(Instant.from(OffsetDateTime.now().plus(duration)));
+        return Timestamp.valueOf(expiration());
     }
 
     public static Timestamp MAX = Timestamp.valueOf(LocalDateTime.of(9999, 12, 31, 23, 59, 59));
@@ -97,10 +138,16 @@ public class PunishmentDuration implements Comparable<PunishmentDuration> {
                 '}';
     }
 
+    /**
+     * @return the duration set in the constructor
+     */
     public Duration duration() {
         return duration;
     }
 
+    /**
+     * @return whether this duration is permanent or not
+     */
     public boolean isPermanent() {
         return permanent;
     }
@@ -116,7 +163,11 @@ public class PunishmentDuration implements Comparable<PunishmentDuration> {
 
     @Override
     public int hashCode() {
-        return Objects.hash(duration, permanent);
+        int result = duration.hashCode();
+        result = 31 * result + (permanent ? 1 : 0);
+        result = 31 * result + (relative ? 1 : 0);
+        result = 31 * result + fixedExpiration.hashCode();
+        return result;
     }
 
     @Override
@@ -124,14 +175,26 @@ public class PunishmentDuration implements Comparable<PunishmentDuration> {
         return expiration().compareTo(o.expiration());
     }
 
+    /**
+     * @return the end of this punishment as string
+     */
     public String getEnd() {
         return expiration().format(DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm:ss"));
     }
 
+    /**
+     * @return the remaining duration represented as string
+     */
     public String getRemainingDuration() {
         return representDuration(Duration.between(LocalDateTime.now(), expiration()));
     }
 
+    /**
+     * not yet supported.
+     *
+     * @return the initial duration
+     */
+    @Beta
     public String getInitialDuration() {
         return representDuration(duration);
     }
