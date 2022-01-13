@@ -10,8 +10,8 @@ Velocity punishment is a punishment plugin designed for
 2. [Duration](#duration)
 3. [Commands](#commands)
 4. [API](#punishment-api)
-   * [installation](#installation)
-   * [usage](#usage)
+    * [installation](#installation)
+    * [usage](#usage)
 
 ## Plugin installation
 
@@ -102,11 +102,11 @@ dependencies {
 If the [plugin](#plugin-installation) is used, you can obtain an instance of the api using the following snippet:
 
 ```java
-    try{
-        VelocityPunishment api=(VelocityPunishment)server.getPluginManager().getPlugin("velocity-punishment").orElseThrow().getInstance().orElseThrow();
-        }catch(NoSuchElementException e){
+    try {
+        VelocityPunishment api = (VelocityPunishment) server.getPluginManager().getPlugin("velocity-punishment").orElseThrow().getInstance().orElseThrow();
+    } catch(NoSuchElementException e) {
         logger.error("Punishment API is not available");
-        }
+    }
 ```
 
 #### Punishing a player
@@ -115,19 +115,19 @@ All punishments are imposed via the punishment manager (obtainable via VelocityP
 example, banning a player could be done this way:
 
 ```java
-    PunishmentManager punishmentManager=api.getPunishmentManager();
-        //temporary ban:
-        Ban temporaryBan=punishmentManager.createBan(uuid,Component.text("You are banned from this server.").color(NamedTextColor.RED),PunishmentDuration.parse("1d"));//1d equals 1 day, the duration is relative to the current time until the punishment is imposed.
-        //permanent ban:
-        Ban permanentBan=punishmentManager.createPermanentBan(uuid2,Component.text("You are banned permanently from this server").color(NamedTextColor.RED))
-        //To finally punish the player, use Punishment#punish which will return a CompletableFuture with the punishment was imposed
-        temporaryBan.punish().whenCompleteAsync((ban,throwable)->{
-        if(throwable!=null){
-        logger.error("Error punishing player",throwable);
+    PunishmentManager punishmentManager = api.getPunishmentManager();
+    //temporary ban:
+    Ban temporaryBan = punishmentManager.createBan(uuid, Component.text("You are banned from this server.").color(NamedTextColor.RED), PunishmentDuration.parse("1d"));//1d equals 1 day, the duration is relative to the current time until the punishment is imposed.
+    //permanent ban:
+    Ban permanentBan = punishmentManager.createPermanentBan(uuid2, Component.text("You are banned permanently from this server").color(NamedTextColor.RED))
+    //To finally punish the player, use Punishment#punish which will return a CompletableFuture with the punishment was imposed
+    temporaryBan.punish().whenCompleteAsync((ban,throwable) -> {
+    if (throwable != null) {
+        logger.error("Error punishing player", throwable);
         return;
-        }
-        logger.info("The player was successfully banned. Punishment id: "+ban.getPunishmentUuid());
-        });
+    }
+    logger.info("The player was successfully banned. Punishment id: " + ban.getPunishmentUuid());
+    });
 ```
 
 Muting a player is similar, just replace 'ban' with 'mute'.
