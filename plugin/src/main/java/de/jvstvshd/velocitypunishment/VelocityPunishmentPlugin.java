@@ -25,6 +25,7 @@
 package de.jvstvshd.velocitypunishment;
 
 import com.google.inject.Inject;
+import com.velocitypowered.api.command.BrigadierCommand;
 import com.velocitypowered.api.command.CommandManager;
 import com.velocitypowered.api.event.EventManager;
 import com.velocitypowered.api.event.Subscribe;
@@ -109,6 +110,8 @@ public class VelocityPunishmentPlugin implements VelocityPunishment {
         commandManager.register(commandManager.metaBuilder("mute").build(), new MuteCommand(this, chatListener));
         commandManager.register(commandManager.metaBuilder("tempmute").build(), new TempmuteCommand(this, chatListener));
         commandManager.register(commandManager.metaBuilder("unmute").build(), new UnmuteCommand(this, chatListener));
+
+        commandManager.register(new BrigadierCommand(KickCommand.create(this)));
     }
 
     private HikariDataSource createDataSource() {

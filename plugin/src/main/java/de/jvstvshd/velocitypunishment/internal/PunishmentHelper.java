@@ -24,6 +24,8 @@
 
 package de.jvstvshd.velocitypunishment.internal;
 
+import com.mojang.brigadier.arguments.StringArgumentType;
+import com.mojang.brigadier.context.CommandContext;
 import com.velocitypowered.api.command.CommandSource;
 import com.velocitypowered.api.command.SimpleCommand;
 import de.jvstvshd.velocitypunishment.api.message.MessageProvider;
@@ -93,6 +95,13 @@ public class PunishmentHelper {
             builder.append(invocation.arguments()[i]).append(" ");
         }
         return LegacyComponentSerializer.legacyAmpersand().deserialize(builder.toString());
+    }
+
+    public TextComponent parseComponent(int startIndex, CommandContext<CommandSource> context, TextComponent def) {
+        if (context.getArguments().size() <= startIndex) {
+            return def;
+        }
+        return LegacyComponentSerializer.legacyAmpersand().deserialize(StringArgumentType.getString(context, "reason"));
     }
 
     public CompletableFuture<UUID> getPlayerUuid(int argumentIndex, ExecutorService service, PlayerResolver playerResolver, SimpleCommand.Invocation invocation) {
