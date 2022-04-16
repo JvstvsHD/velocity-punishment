@@ -24,9 +24,13 @@
 
 package de.jvstvshd.velocitypunishment.internal;
 
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Sets;
 import com.velocitypowered.api.command.CommandSource;
+import com.velocitypowered.api.command.SimpleCommand;
 import com.velocitypowered.api.proxy.Player;
+import com.velocitypowered.api.proxy.ProxyServer;
+import de.jvstvshd.velocitypunishment.VelocityPunishmentPlugin;
 import de.jvstvshd.velocitypunishment.api.message.MessageProvider;
 import de.jvstvshd.velocitypunishment.api.punishment.Punishment;
 import de.jvstvshd.velocitypunishment.api.punishment.TemporalPunishment;
@@ -137,5 +141,30 @@ public class Util {
 
     public static String trimUuid(UUID origin) {
         return origin.toString().toLowerCase().replace("-", "");
+    }
+
+    public static boolean sendErrorMessageIfErrorOccurred(SimpleCommand.Invocation invocation, CommandSource source, UUID uuid, Throwable throwable, VelocityPunishmentPlugin plugin) {
+        if (throwable != null) {
+            source.sendMessage(plugin.getMessageProvider().internalError(source, true));
+            throwable.printStackTrace();
+            return true;
+        }
+        if (uuid == null) {
+            source.sendMessage(Component.translatable().args(Component.text(invocation.arguments()[0]).color(NamedTextColor.YELLOW)).key("commands.general.not-found").color(NamedTextColor.RED));
+            return true;
+        }
+        return false;
+    }
+
+    public static List<String> getPlayerNames(SimpleCommand.Invocation invocation, ProxyServer proxyServer) {
+        String[] args = invocation.arguments();
+        if (args.length == 0) {
+            return Util.getPlayerNames(proxyServer.getAllPlayers());
+        }
+        if (args.length == 1) {
+            return Util.getPlayerNames(proxyServer.getAllPlayers())
+                    .stream().filter(s -> s.toLowerCase().startsWith(args[0])).collect(Collectors.toList());
+        }
+        return ImmutableList.of();
     }
 }

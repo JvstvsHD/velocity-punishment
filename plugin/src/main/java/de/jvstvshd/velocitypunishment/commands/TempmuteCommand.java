@@ -24,7 +24,6 @@
 
 package de.jvstvshd.velocitypunishment.commands;
 
-import com.google.common.collect.ImmutableList;
 import com.velocitypowered.api.command.CommandSource;
 import com.velocitypowered.api.command.SimpleCommand;
 import com.velocitypowered.api.proxy.ProxyServer;
@@ -44,7 +43,6 @@ import java.util.Optional;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.TimeoutException;
-import java.util.stream.Collectors;
 
 import static de.jvstvshd.velocitypunishment.internal.Util.copyComponent;
 
@@ -111,15 +109,7 @@ public class TempmuteCommand implements SimpleCommand {
 
     @Override
     public List<String> suggest(Invocation invocation) {
-        String[] args = invocation.arguments();
-        if (args.length == 0) {
-            return Util.getPlayerNames(proxyServer.getAllPlayers());
-        }
-        if (args.length == 1) {
-            return Util.getPlayerNames(proxyServer.getAllPlayers())
-                    .stream().filter(s -> s.toLowerCase().startsWith(args[0])).collect(Collectors.toList());
-        }
-        return ImmutableList.of();
+        return Util.getPlayerNames(invocation, proxyServer);
     }
 
     @Override

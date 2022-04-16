@@ -24,7 +24,6 @@
 
 package de.jvstvshd.velocitypunishment.commands;
 
-import com.google.common.collect.ImmutableList;
 import com.velocitypowered.api.command.CommandSource;
 import com.velocitypowered.api.command.SimpleCommand;
 import de.jvstvshd.velocitypunishment.VelocityPunishmentPlugin;
@@ -36,7 +35,6 @@ import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.format.TextDecoration;
 
 import java.util.List;
-import java.util.stream.Collectors;
 
 import static de.jvstvshd.velocitypunishment.internal.Util.copyComponent;
 
@@ -60,15 +58,7 @@ public class BanCommand implements SimpleCommand {
         var punishmentManager = plugin.getPunishmentManager();
         var parser = new PunishmentHelper();
         playerResolver.getOrQueryPlayerUuid(invocation.arguments()[0], plugin.getService()).whenCompleteAsync((uuid, throwable) -> {
-            if (throwable != null) {
-                source.sendMessage(plugin.getMessageProvider().internalError(source, true));
-                throwable.printStackTrace();
-                return;
-            }
-            if (uuid == null) {
-                source.sendMessage(Component.translatable().args(Component.text(invocation.arguments()[0]).color(NamedTextColor.YELLOW)).key("commands.general.not-found").color(NamedTextColor.RED));
-                return;
-            }
+            if (Util.sendErrorMessageIfErrorOccurred(invocation, source, uuid, throwable, plugin)) return;
             TextComponent component = parser.parseComponent(1, invocation, Component.text("ban").color(NamedTextColor.DARK_RED));
             punishmentManager.createPermanentBan(uuid, component).punish().whenCompleteAsync((ban, t) -> {
                 if (t != null) {
@@ -85,19 +75,13 @@ public class BanCommand implements SimpleCommand {
         }, plugin.getService());
     }
 
+
     @Override
     public List<String> suggest(Invocation invocation) {
         var proxyServer = plugin.getServer();
-        String[] args = invocation.arguments();
-        if (args.length == 0) {
-            return Util.getPlayerNames(proxyServer.getAllPlayers());
-        }
-        if (args.length == 1) {
-            return Util.getPlayerNames(proxyServer.getAllPlayers())
-                    .stream().filter(s -> s.toLowerCase().startsWith(args[0])).collect(Collectors.toList());
-        }
-        return ImmutableList.of();
+        return Util.getPlayerNames(invocation, proxyServer);
     }
+
 
     @Override
     public boolean hasPermission(Invocation invocation) {

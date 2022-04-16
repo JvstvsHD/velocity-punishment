@@ -53,8 +53,9 @@ public class DefaultPlayerResolver implements PlayerResolver {
     @Override
     public Optional<String> getPlayerName(@NotNull UUID uuid) {
         Optional<Player> optional = proxyServer.getPlayer(uuid);
-        if (optional.isEmpty())
+        if (optional.isEmpty()) {
             return Optional.empty();
+        }
         return Optional.ofNullable(optional.get().getUsername());
     }
 
