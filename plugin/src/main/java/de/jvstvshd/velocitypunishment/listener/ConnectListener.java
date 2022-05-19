@@ -37,6 +37,7 @@ import de.jvstvshd.velocitypunishment.internal.Util;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
 
+import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
@@ -45,8 +46,18 @@ import java.util.concurrent.TimeUnit;
 public record ConnectListener(VelocityPunishmentPlugin plugin,
                               ExecutorService service, ProxyServer proxyServer, ChatListener chatListener) {
 
-    @Subscribe()
-    public void onConnect(LoginEvent event) {
+    @Subscribe
+    public void onConnect(LoginEvent event) throws SQLException {
+        if (plugin.whitelistActive()) {
+            try (var connection = plugin.getDataSource().getConnection();
+                 var statement = connection.prepareStatement("SELECT * FROM velocity_punishment_whitelist WHERE uuid = ?;")) {
+                statement.setString(1, Util.trimUuid(event.getPlayer().getUniqueId()));
+                if (statement.executeQuery().next()) {
+                    event.setResult(ResultedEvent.ComponentResult.denied(Component.text("WHITELIST").color(NamedTextColor.DARK_RED)));
+                    return;
+                }
+            }
+        }
         List<Punishment> punishments;
         try {
             punishments = plugin.getPunishmentManager().getPunishments(event.getPlayer().getUniqueId(), service, StandardPunishmentType.BAN,

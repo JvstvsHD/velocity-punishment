@@ -32,11 +32,17 @@ public class ConfigData {
     private DataBaseData dataBaseData = new DataBaseData();
     private Locale forcedLanguage = null;
 
+    private boolean whitelistActivated = false;
+
     public DataBaseData getDataBaseData() {
         return dataBaseData;
     }
 
     public Locale getForcedLanguage() {
         return forcedLanguage;
+    }
+
+    public boolean isWhitelistActivated() {
+        return whitelistActivated;
     }
 }

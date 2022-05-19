@@ -182,4 +182,8 @@ public class VelocityPunishmentPlugin implements VelocityPunishment {
     public void setMessageProvider(MessageProvider messageProvider) {
         this.messageProvider = messageProvider;
     }
+
+    public boolean whitelistActive() {
+        return configurationManager.getConfiguration().isWhitelistActivated();
+    }
 }
