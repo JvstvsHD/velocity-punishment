@@ -105,7 +105,13 @@ public class DefaultPlayerResolver implements PlayerResolver {
                     cf.complete(null);
                     return;
                 }
-                var result = jsonElement.getAsJsonObject().get("id").getAsString();
+                var idElement = jsonElement.getAsJsonObject().get("id");
+                if (idElement == null) {
+                    //TODO rework with return type as Optional
+                    cf.complete(null);
+                    return;
+                }
+                var result = idElement.getAsString();
                 UUID uuid;
                 try {
                     uuid = UUID.fromString(result);
@@ -124,12 +130,12 @@ public class DefaultPlayerResolver implements PlayerResolver {
 
     @Override
     public CompletableFuture<UUID> getOrQueryPlayerUuid(@NotNull String name, @NotNull Executor executor) {
+        if (getPlayerUuid(name).isPresent()) {
+            return CompletableFuture.completedFuture(getPlayerUuid(name).get());
+        }
         try {
             return CompletableFuture.completedFuture(Util.parseUuid(name));
         } catch (IllegalArgumentException e) {
-            if (getPlayerUuid(name).isPresent()) {
-                return CompletableFuture.completedFuture(getPlayerUuid(name).get());
-            }
             return queryPlayerUuid(name, executor);
         }
     }

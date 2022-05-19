@@ -133,6 +133,10 @@ public class VelocityPunishmentPlugin implements VelocityPunishment {
                         "reason VARCHAR (1000), punishment_id VARCHAR (36))")) {
             statement.execute();
         }
+        try (Connection connection = dataSource.getConnection(); PreparedStatement statement =
+                connection.prepareStatement("CREATE TABLE IF NOT EXISTS velocity_punishment_whitelist (uuid VARCHAR (36))")) {
+            statement.execute();
+        }
     }
 
     @Override
