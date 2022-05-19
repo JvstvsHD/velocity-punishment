@@ -41,7 +41,6 @@ import java.util.concurrent.TimeoutException;
 
 import static de.jvstvshd.velocitypunishment.internal.Util.copyComponent;
 
-@SuppressWarnings("ClassCanBeRecord")
 public class MuteCommand implements SimpleCommand {
 
     private final VelocityPunishmentPlugin plugin;

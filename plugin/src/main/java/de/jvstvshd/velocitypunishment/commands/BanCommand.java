@@ -24,9 +24,6 @@
 
 package de.jvstvshd.velocitypunishment.commands;
 
-import com.mojang.brigadier.Command;
-import com.mojang.brigadier.context.CommandContext;
-import com.mojang.brigadier.exceptions.CommandSyntaxException;
 import com.velocitypowered.api.command.CommandSource;
 import com.velocitypowered.api.command.SimpleCommand;
 import de.jvstvshd.velocitypunishment.VelocityPunishmentPlugin;
@@ -41,8 +38,7 @@ import java.util.List;
 
 import static de.jvstvshd.velocitypunishment.internal.Util.copyComponent;
 
-@SuppressWarnings("ClassCanBeRecord")
-public class BanCommand implements SimpleCommand, Command<CommandSource> {
+public class BanCommand implements SimpleCommand {
 
     private final VelocityPunishmentPlugin plugin;
 
@@ -89,10 +85,5 @@ public class BanCommand implements SimpleCommand, Command<CommandSource> {
     @Override
     public boolean hasPermission(Invocation invocation) {
         return invocation.source().hasPermission("punishment.command.ban");
-    }
-
-    @Override
-    public int run(CommandContext<CommandSource> context) throws CommandSyntaxException {
-        return 0;
     }
 }
