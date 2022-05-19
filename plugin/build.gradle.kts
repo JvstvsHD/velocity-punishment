@@ -13,12 +13,12 @@ repositories {
 dependencies {
     compileOnly("com.velocitypowered:velocity-api:3.1.1")
     annotationProcessor("com.velocitypowered:velocity-api:3.1.1")
-    compileOnly("net.luckperms:api:5.3")
+    compileOnly("net.luckperms:api:5.4")
     implementation(project(":api"))
-    implementation("com.fasterxml.jackson.core:jackson-databind:2.13.1")
+    implementation("com.fasterxml.jackson.core:jackson-databind:2.13.3")
 
-    implementation("org.mariadb.jdbc:mariadb-java-client:2.7.4")
-    implementation("com.zaxxer:HikariCP:5.0.0")
+    implementation("org.mariadb.jdbc:mariadb-java-client:3.0.4")
+    implementation("com.zaxxer:HikariCP:5.0.1")
     testImplementation("org.junit.jupiter:junit-jupiter-api:5.8.2")
     testRuntimeOnly("org.junit.jupiter:junit-jupiter-engine")
 }
@@ -37,6 +37,7 @@ tasks.getByName<Test>("test") {
 tasks {
     shadowJar {
         minimize()
+        archiveBaseName.set("velocity-punishment")
     }
     build {
         dependsOn(shadowJar)
