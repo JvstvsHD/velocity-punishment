@@ -32,7 +32,7 @@ public class WhitelistCommand implements SimpleCommand {
                     var rs = statement.executeQuery();
                     var whitelisted = rs.next() ? plugin.getMessageProvider().provide("whitelist.status.whitelisted", source) :
                             plugin.getMessageProvider().provide("whitelist.status.disallowed", source);
-                    source.sendMessage(plugin.getMessageProvider().provide("command.whitelist.status", source, true, whitelisted));
+                    source.sendMessage(plugin.getMessageProvider().provide("command.whitelist.status", source, true, Component.text(invocation.arguments()[0]).color(NamedTextColor.YELLOW), whitelisted.color(NamedTextColor.YELLOW)));
                 } catch (SQLException e) {
                     throw new RuntimeException(e);
                 }
@@ -55,8 +55,7 @@ public class WhitelistCommand implements SimpleCommand {
                     }
                 }, plugin.getService());
             }
-            default ->
-                    source.sendMessage(plugin.getMessageProvider().provide("command.whitelist.status.unknown", source, true, Component.text(option).color(NamedTextColor.YELLOW)));
+            default -> source.sendMessage(plugin.getMessageProvider().provide("command.whitelist.usage", source, true));
         }
     }
 
