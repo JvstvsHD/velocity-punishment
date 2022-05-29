@@ -49,10 +49,11 @@ public record ConnectListener(VelocityPunishmentPlugin plugin,
     @Subscribe
     public void onConnect(LoginEvent event) throws SQLException {
         if (plugin.whitelistActive()) {
+            plugin.getLogger().info("Whitelist is activated.");
             try (var connection = plugin.getDataSource().getConnection();
                  var statement = connection.prepareStatement("SELECT * FROM velocity_punishment_whitelist WHERE uuid = ?;")) {
                 statement.setString(1, Util.trimUuid(event.getPlayer().getUniqueId()));
-                if (statement.executeQuery().next()) {
+                if (!statement.executeQuery().next()) {
                     event.setResult(ResultedEvent.ComponentResult.denied(Component.text("WHITELIST").color(NamedTextColor.DARK_RED)));
                     return;
                 }
