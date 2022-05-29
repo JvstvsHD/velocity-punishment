@@ -50,7 +50,6 @@ import java.util.jar.JarEntry;
 import java.util.jar.JarFile;
 import java.util.stream.Stream;
 
-@SuppressWarnings("ClassCanBeRecord")
 public class ResourceBundleMessageProvider implements MessageProvider {
 
     private final ConfigData configData;
@@ -61,6 +60,9 @@ public class ResourceBundleMessageProvider implements MessageProvider {
             var registry = TranslationRegistry.create(Key.key("velocity-punishment"));
             registry.defaultLocale(Locale.ENGLISH);
             var baseDir = Path.of("plugins", "velocity-punishment", "translations");
+            if (!Files.exists(baseDir)) {
+                Files.createDirectories(baseDir);
+            }
             try (Stream<Path> paths = Files.list(baseDir)) {
                 paths.filter(path -> path.getFileName().toString().endsWith(".properties")).forEach(path -> {
                     PropertyResourceBundle resource;
@@ -72,15 +74,15 @@ public class ResourceBundleMessageProvider implements MessageProvider {
                         e.printStackTrace();
                     }
                 });
-
-                JarFile jar = new JarFile(new File(VelocityPunishmentPlugin.class.getProtectionDomain().getCodeSource().getLocation().toURI()));
-                for (JarEntry translationEntry : jar.stream().filter(jarEntry -> jarEntry.getName().toLowerCase().contains("translations") && !jarEntry.isDirectory()).toList()) {
-                    var path = Path.of(baseDir.toString(), translationEntry.getName().split("/")[1]);
-                    if (Files.exists(path)) {
-                        continue;
+                try (JarFile jar = new JarFile(new File(VelocityPunishmentPlugin.class.getProtectionDomain().getCodeSource().getLocation().toURI()))) {
+                    for (JarEntry translationEntry : jar.stream().filter(jarEntry -> jarEntry.getName().toLowerCase().contains("translations") && !jarEntry.isDirectory()).toList()) {
+                        var path = Path.of(baseDir.toString(), translationEntry.getName().split("/")[1]);
+                        if (Files.exists(path)) {
+                            continue;
+                        }
+                        System.out.println("copying translation file " + translationEntry.getName());
+                        Files.copy(Objects.requireNonNull(VelocityPunishmentPlugin.class.getResourceAsStream("/" + translationEntry.getName())), path);
                     }
-                    System.out.println("copying translation file " + translationEntry.getName());
-                    Files.copy(Objects.requireNonNull(VelocityPunishmentPlugin.class.getResourceAsStream("/" + translationEntry.getName())), path);
                 }
             }
             GlobalTranslator.get().addSource(registry);
