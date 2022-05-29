@@ -65,20 +65,23 @@ public class WhitelistCommand implements SimpleCommand {
         }
         var option = invocation.arguments()[1].toLowerCase();
         switch (option) {
-            case "add", "remove" -> {
-                plugin.getPlayerResolver().getOrQueryPlayerUuid(invocation.arguments()[0], plugin.getService()).whenCompleteAsync((uuid, throwable) -> {
-                    if (Util.sendErrorMessageIfErrorOccurred(invocation, source, uuid, throwable, plugin)) return;
-                    try (var connection = plugin.getDataSource().getConnection();
-                         var statement = connection.prepareStatement(option.equals("add") ? "INSERT INTO velocity_punishment_whitelist (uuid) VALUES (?);" :
-                                 "DELETE FROM velocity_punishment_whitelist WHERE uuid = ?;")) {
-                        statement.setString(1, Util.trimUuid(uuid));
-                        source.sendMessage(plugin.getMessageProvider().provide("command.whitelist.success", source, true));
-                    } catch (SQLException e) {
-                        e.printStackTrace();
-                        source.sendMessage(plugin.getMessageProvider().internalError(source, true));
-                    }
-                }, plugin.getService());
-            }
+            case "add", "remove" ->
+                    plugin.getPlayerResolver().getOrQueryPlayerUuid(invocation.arguments()[0], plugin.getService()).whenCompleteAsync((uuid, throwable) -> {
+                        if (Util.sendErrorMessageIfErrorOccurred(invocation, source, uuid, throwable, plugin)) return;
+                        try (var connection = plugin.getDataSource().getConnection();
+                             var statement = connection.prepareStatement(option.equals("add") ? "INSERT INTO velocity_punishment_whitelist (uuid) VALUES (?);" :
+                                     "DELETE FROM velocity_punishment_whitelist WHERE uuid = ?;")) {
+                            statement.setString(1, Util.trimUuid(uuid));
+                            statement.executeUpdate();
+                            source.sendMessage(plugin.getMessageProvider().provide("command.whitelist.success", source, true));
+                            if (option.equals("remove")) {
+                                plugin.getServer().getPlayer(uuid).ifPresent(player -> player.disconnect(Component.text("You have been blacklisted.").color(NamedTextColor.DARK_RED)));
+                            }
+                        } catch (SQLException e) {
+                            e.printStackTrace();
+                            source.sendMessage(plugin.getMessageProvider().internalError(source, true));
+                        }
+                    }, plugin.getService());
             default -> source.sendMessage(plugin.getMessageProvider().provide("command.whitelist.usage", source, true));
         }
     }
