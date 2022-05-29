@@ -81,6 +81,9 @@ public class VelocityPunishmentPlugin implements VelocityPunishment {
     public void onProxyInitialization(ProxyInitializeEvent event) {
         try {
             configurationManager.load();
+            if (configurationManager.getConfiguration().isWhitelistActivated()) {
+                logger.info("Whitelist is activated. This means that nobody can join this server beside players you have explicitly allowed to join this server via /whitelist <player> add");
+            }
             this.messageProvider = new ResourceBundleMessageProvider(configurationManager.getConfiguration());
         } catch (IOException e) {
             logger.error("Could not load configuration", e);
@@ -109,8 +112,9 @@ public class VelocityPunishmentPlugin implements VelocityPunishment {
         commandManager.register(commandManager.metaBuilder("mute").build(), new MuteCommand(this, chatListener));
         commandManager.register(commandManager.metaBuilder("tempmute").build(), new TempmuteCommand(this, chatListener));
         commandManager.register(commandManager.metaBuilder("unmute").build(), new UnmuteCommand(this, chatListener));
-
         commandManager.register(commandManager.metaBuilder("kick").build(), new KickCommand(this));
+
+        commandManager.register(commandManager.metaBuilder("whitelist").build(), new WhitelistCommand(this));
     }
 
     private HikariDataSource createDataSource() {
@@ -181,6 +185,10 @@ public class VelocityPunishmentPlugin implements VelocityPunishment {
     @Override
     public void setMessageProvider(MessageProvider messageProvider) {
         this.messageProvider = messageProvider;
+    }
+
+    public Logger getLogger() {
+        return logger;
     }
 
     public boolean whitelistActive() {
