@@ -85,7 +85,7 @@ public class ResourceBundleMessageProvider implements MessageProvider {
                     }
                 }
             }
-            GlobalTranslator.get().addSource(registry);
+            GlobalTranslator.translator().addSource(registry);
         } catch (IOException | URISyntaxException e) {
             e.printStackTrace();
         }

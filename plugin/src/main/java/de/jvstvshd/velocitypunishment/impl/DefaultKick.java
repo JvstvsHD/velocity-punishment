@@ -39,10 +39,6 @@ import java.util.concurrent.ExecutorService;
 
 public class DefaultKick extends AbstractPunishment implements Kick {
 
-    public DefaultKick(UUID playerUuid, Component reason, DataSource dataSource, PlayerResolver playerResolver, PunishmentManager punishmentManager, ExecutorService service, MessageProvider messageProvider) {
-        super(playerUuid, reason, dataSource, playerResolver, punishmentManager, service, messageProvider);
-    }
-
     public DefaultKick(UUID playerUuid, Component reason, DataSource dataSource, ExecutorService service, PunishmentManager punishmentManager, UUID punishmentUuid, PlayerResolver playerResolver, MessageProvider messageProvider) {
         super(playerUuid, reason, dataSource, service, punishmentManager, punishmentUuid, playerResolver, messageProvider);
     }

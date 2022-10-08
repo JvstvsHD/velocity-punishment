@@ -2,17 +2,14 @@ plugins {
     java
 }
 
-group = "de.jvstvshd.punishment.velocity"
-version = "1.0.0"
-
 repositories {
     mavenCentral()
 }
 
 dependencies {
-    compileOnly("com.velocitypowered:velocity-api:3.1.1")
-    testImplementation("org.junit.jupiter:junit-jupiter-api:5.8.2")
-    testRuntimeOnly("org.junit.jupiter:junit-jupiter-engine")
+    compileOnly(libs.velocity.api)
+    testImplementation(libs.junit.jupiter.api)
+    testRuntimeOnly(libs.junit.jupiter.engine)
 }
 
 java {
@@ -21,40 +18,40 @@ java {
 }
 
 publishing {
-    val repoUrl = System.getenv("REPO_URL")
-    publications.create<MavenPublication>("maven") {
-        artifact(project.tasks.getByName("jar"))
-        artifact(project.tasks.getByName("sourcesJar"))
-        artifact(project.tasks.getByName("javadocJar"))
-        pom {
-            name.set("Velocity Punishment API")
-            description.set("API for punishing players via velocity")
-            url.set("https://github.com/JvstvsHD/VelocityPunishment")
-            licenses {
-                license {
-                    name.set("MIT")
-                    url.set("https://opensource.org/licenses/MIT")
-                }
-            }
-            developers {
-                developer {
-                    name.set("JvstvsHD")
-                    url.set("jvstvshd.de")
-                }
+    repositories {
+        maven("https://s01.oss.sonatype.org/service/local/staging/deploy/maven2/") {
+            name = "ossrh"
+            credentials {
+                username = project.findProperty("sonatypeUsername") as String? ?: System.getenv("SONATYPE_USERNAME")
+                password = project.findProperty("sonatypePassword") as String? ?: System.getenv("SONATYPE_PASSWORD")
             }
         }
     }
-    repositories {
-        maven {
-            isAllowInsecureProtocol = true
-            val url =
-                uri(if ((version as String).endsWith("SNAPSHOT")) "${repoUrl}snapshots/" else "${repoUrl}releases/")
-            println(url)
-            this.url = url
-
-            credentials(PasswordCredentials::class) {
-                username = System.getenv("REPO_USERNAME")
-                password = System.getenv("REPO_PASSWORD")
+    publications {
+        register<MavenPublication>(project.name) {
+            from(components["java"])
+            groupId = project.group.toString().toLowerCase()
+            artifactId = project.name.toLowerCase()
+            version = project.version.toString()
+            pom {
+                name.set(project.name)
+                description.set(project.description)
+                developers {
+                    developer {
+                        name.set("JvstvsHD")
+                    }
+                }
+                licenses {
+                    license {
+                        name.set("GNU General Public License v3.0")
+                        url.set("https://www.gnu.org/licenses/gpl-3.0.en.html")
+                    }
+                }
+                url.set("https://github.com/JvstvsHD/velocity-punishment")
+                scm {
+                    connection.set("scm:git:git://github.com/JvstvsHD/velocity-punishment.git")
+                    url.set("https://github.com/JvstvsHD/velocity-punishment/tree/main")
+                }
             }
         }
     }

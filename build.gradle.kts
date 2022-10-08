@@ -7,25 +7,24 @@ plugins {
 }
 
 group = "de.jvstvshd.punishment.velocity"
-version = "1.0.0"
+version = "1.1.0"
 
 subprojects {
     apply {
         plugin<Licenser>()
         plugin<MavenPublishPlugin>()
     }
-    repositories {
-        maven("https://nexus.velocitypowered.com/repository/maven-public/")
-        maven("https://papermc.io/repo/repository/maven-public/")
-        mavenCentral()
-    }
-}
 
-allprojects {
     license {
         header(rootProject.file("HEADER.txt"))
         include("**/*.java")
         newLine(true)
+    }
+
+    repositories {
+        maven("https://nexus.velocitypowered.com/repository/maven-public/")
+        maven("https://papermc.io/repo/repository/maven-public/")
+        mavenCentral()
     }
 }
 

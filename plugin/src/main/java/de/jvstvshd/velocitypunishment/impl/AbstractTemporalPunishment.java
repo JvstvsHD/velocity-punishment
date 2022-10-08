@@ -25,14 +25,20 @@
 package de.jvstvshd.velocitypunishment.impl;
 
 import de.jvstvshd.velocitypunishment.api.message.MessageProvider;
+import de.jvstvshd.velocitypunishment.api.punishment.Punishment;
 import de.jvstvshd.velocitypunishment.api.punishment.PunishmentDuration;
 import de.jvstvshd.velocitypunishment.api.punishment.PunishmentManager;
 import de.jvstvshd.velocitypunishment.api.punishment.TemporalPunishment;
 import de.jvstvshd.velocitypunishment.api.punishment.util.PlayerResolver;
+import de.jvstvshd.velocitypunishment.internal.Util;
 import net.kyori.adventure.text.Component;
 
 import javax.sql.DataSource;
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.Timestamp;
 import java.util.UUID;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
 
 public abstract class AbstractTemporalPunishment extends AbstractPunishment implements TemporalPunishment {
@@ -70,5 +76,20 @@ public abstract class AbstractTemporalPunishment extends AbstractPunishment impl
         if (!isValid()) {
             throw new IllegalStateException("punishment is invalid (probably isOngoing returned false)");
         }
+    }
+
+    @Override
+    public CompletableFuture<Punishment> change(PunishmentDuration newDuration, Component newReason) {
+        return executeAsync(() -> {
+            try (Connection connection = getDataSource().getConnection();
+                 PreparedStatement statement = connection.prepareStatement(APPLY_CHANGE)) {
+                statement.setString(1, convertReason(newReason));
+                statement.setTimestamp(2, Timestamp.valueOf(newDuration.expiration()));
+                statement.setBoolean(3, newDuration.isPermanent());
+                statement.setString(4, Util.trimUuid(getPunishmentUuid()));
+                statement.executeUpdate();
+            }
+            return new DefaultMute(getPlayerUuid(), newReason, getDataSource(), getPlayerResolver(), getPunishmentManager(), getService(), newDuration, getMessageProvider());
+        }, getService());
     }
 }

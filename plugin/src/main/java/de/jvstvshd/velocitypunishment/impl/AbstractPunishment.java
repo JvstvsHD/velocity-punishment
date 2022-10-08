@@ -52,7 +52,6 @@ public abstract class AbstractPunishment implements Punishment {
     protected final static String APPLY_PUNISHMENT = "INSERT INTO velocity_punishment" +
             " (uuid, name, type, expiration, reason, punishment_id) VALUES (?, ?, ?, ?, ?, ?)";
     protected final static String APPLY_ANNUL = "DELETE FROM velocity_punishment WHERE punishment_id = ?";
-    @SuppressWarnings("GrazieInspection")
     protected final static String APPLY_CHANGE = "UPDATE velocity_punishment SET reason = ?, expiration = ?, permanent = ? WHERE punishment_id = ?";
     private boolean validity;
 

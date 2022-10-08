@@ -41,7 +41,6 @@ import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executor;
 
-@SuppressWarnings("ClassCanBeRecord")
 public class DefaultPlayerResolver implements PlayerResolver {
 
     private final ProxyServer proxyServer;

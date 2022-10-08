@@ -36,7 +36,6 @@ import net.kyori.adventure.text.format.TextDecoration;
 import javax.sql.DataSource;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
-import java.sql.Timestamp;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.UUID;
@@ -89,21 +88,6 @@ public class DefaultMute extends AbstractTemporalPunishment implements Mute {
                 statement.executeUpdate();
                 return this;
             }
-        }, getService());
-    }
-
-    @Override
-    public CompletableFuture<Punishment> change(PunishmentDuration newDuration, Component newReason) {
-        return executeAsync(() -> {
-            try (Connection connection = getDataSource().getConnection();
-                 PreparedStatement statement = connection.prepareStatement(APPLY_CHANGE)) {
-                statement.setString(1, convertReason(newReason));
-                statement.setTimestamp(2, Timestamp.valueOf(newDuration.expiration()));
-                statement.setBoolean(3, newDuration.isPermanent());
-                statement.setString(4, Util.trimUuid(getPunishmentUuid()));
-                statement.executeUpdate();
-            }
-            return new DefaultMute(getPlayerUuid(), newReason, getDataSource(), getPlayerResolver(), getPunishmentManager(), getService(), newDuration, getMessageProvider());
         }, getService());
     }
 

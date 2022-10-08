@@ -142,9 +142,8 @@ public class ChatListener {
             return type;
         }
 
-        public MuteContainer setType(MuteType type) {
+        public void setType(MuteType type) {
             this.type = type;
-            return this;
         }
 
         public Mute getMute() {
