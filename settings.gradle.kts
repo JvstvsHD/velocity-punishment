@@ -14,9 +14,9 @@ dependencyResolutionManagement {
             library("hikari", "com.zaxxer", "HikariCP").version("5.0.1")
             bundle("database", listOf("mariadb", "hikari"))
 
-            val jUnitVersion = version("junit", "5.9.0")
-            library("junit-jupiter-api", "org.junit.jupiter", "junit-jupiter-api").version(jUnitVersion)
-            library("junit-jupiter-engine", "org.junit.jupiter", "junit-jupiter-engine").version(jUnitVersion)
+            val jUnitVersion = version("junit", "5.9.1")
+            library("junit-jupiter-api", "org.junit.jupiter", "junit-jupiter-api").versionRef(jUnitVersion)
+            library("junit-jupiter-engine", "org.junit.jupiter", "junit-jupiter-engine").versionRef(jUnitVersion)
         }
     }
 }
