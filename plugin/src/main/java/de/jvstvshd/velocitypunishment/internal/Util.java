@@ -26,6 +26,7 @@ package de.jvstvshd.velocitypunishment.internal;
 
 import com.google.common.collect.ImmutableList;
 import com.mojang.brigadier.arguments.StringArgumentType;
+import com.mojang.brigadier.builder.LiteralArgumentBuilder;
 import com.mojang.brigadier.builder.RequiredArgumentBuilder;
 import com.mojang.brigadier.context.CommandContext;
 import com.velocitypowered.api.command.CommandSource;
@@ -42,7 +43,6 @@ import net.kyori.adventure.text.event.ClickEvent;
 import net.kyori.adventure.text.event.HoverEvent;
 import net.kyori.adventure.text.event.HoverEventSource;
 import net.kyori.adventure.text.format.NamedTextColor;
-import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
 
 import java.util.*;
 import java.util.concurrent.Callable;
@@ -51,6 +51,9 @@ import java.util.concurrent.Executor;
 import java.util.stream.Collectors;
 
 public class Util {
+
+    public static final RequiredArgumentBuilder<CommandSource, String> reasonArgument = RequiredArgumentBuilder.argument("reason", StringArgumentType.greedyString());
+    public static RequiredArgumentBuilder<CommandSource, String> durationArgument = RequiredArgumentBuilder.argument("duration", StringArgumentType.word());
 
     public static List<String> getPlayerNames(Collection<Player> players) {
         return players.stream().map(Player::getUsername).toList();
@@ -66,6 +69,10 @@ public class Util {
         });
     }
 
+    public static LiteralArgumentBuilder<CommandSource> permissibleCommand(String name, String permission) {
+        return LiteralArgumentBuilder.<CommandSource>literal(name).requires(source -> source.hasPermission(permission));
+    }
+
     public static UUID parseUuid(String uuidString) {
         try {
             return UUID.fromString(uuidString);
@@ -74,17 +81,6 @@ public class Util {
                     "(\\w{8})(\\w{4})(\\w{4})(\\w{4})(\\w{12})",
                     "$1-$2-$3-$4-$5"));
         }
-    }
-
-    public static TextComponent parseComponent(CommandContext<CommandSource> context, TextComponent def) {
-        if (context.getArguments().containsKey("reason")) {
-            return def;
-        }
-        return LegacyComponentSerializer.legacyAmpersand().deserialize(StringArgumentType.getString(context, "reason"));
-    }
-
-    public static TextComponent parseComponent(CommandContext<CommandSource> context) {
-        return parseComponent(context, Component.text("No reason specified", NamedTextColor.RED));
     }
 
     public static TextComponent copyComponent(String text, MessageProvider provider, CommandSource source) {

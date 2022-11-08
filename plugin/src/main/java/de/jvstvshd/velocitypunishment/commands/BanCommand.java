@@ -26,30 +26,25 @@ package de.jvstvshd.velocitypunishment.commands;
 
 import com.mojang.brigadier.Command;
 import com.mojang.brigadier.arguments.StringArgumentType;
-import com.mojang.brigadier.builder.LiteralArgumentBuilder;
 import com.mojang.brigadier.builder.RequiredArgumentBuilder;
 import com.mojang.brigadier.context.CommandContext;
 import com.velocitypowered.api.command.BrigadierCommand;
 import com.velocitypowered.api.command.CommandSource;
-import com.velocitypowered.api.command.SimpleCommand;
 import com.velocitypowered.api.proxy.Player;
 import de.jvstvshd.velocitypunishment.VelocityPunishmentPlugin;
 import de.jvstvshd.velocitypunishment.internal.PunishmentHelper;
 import de.jvstvshd.velocitypunishment.internal.Util;
-import net.kyori.adventure.text.Component;
-import net.kyori.adventure.text.TextComponent;
 import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.format.TextDecoration;
 
 import java.util.Collection;
-import java.util.List;
 
 import static de.jvstvshd.velocitypunishment.internal.Util.copyComponent;
 
-public class BanCommand implements SimpleCommand {
+public class BanCommand {
 
     public static BrigadierCommand banCommand(VelocityPunishmentPlugin plugin) {
-        var node = LiteralArgumentBuilder.<CommandSource>literal("ban")
+        var node = Util.permissibleCommand("ban", "velocitypunishment.command.ban")
                 .then(RequiredArgumentBuilder.<CommandSource, String>argument("player", StringArgumentType.word()).suggests((context, builder) -> {
                             Collection<Player> players = plugin.getServer().getAllPlayers();
                             for (Player player : players) {
@@ -57,14 +52,14 @@ public class BanCommand implements SimpleCommand {
                             }
                             return builder.buildFuture();
                         }).executes(context -> execute(context, plugin))
-                        .then(RequiredArgumentBuilder.<CommandSource, String>argument("reason", StringArgumentType.greedyString()).executes(context -> execute(context, plugin))));
+                        .then(Util.reasonArgument.executes(context -> execute(context, plugin))));
         return new BrigadierCommand(node);
     }
 
     private static int execute(CommandContext<CommandSource> context, VelocityPunishmentPlugin plugin) {
         var source = context.getSource();
         var player = context.getArgument("player", String.class);
-        var reason = Util.parseComponent(context);
+        var reason = PunishmentHelper.parseReason(context);
         var playerResolver = plugin.getPlayerResolver();
         var punishmentManager = plugin.getPunishmentManager();
         playerResolver.getOrQueryPlayerUuid(player, plugin.getService()).whenCompleteAsync((uuid, throwable) -> {
@@ -83,52 +78,5 @@ public class BanCommand implements SimpleCommand {
             });
         });
         return Command.SINGLE_SUCCESS;
-    }
-
-    private final VelocityPunishmentPlugin plugin;
-
-    public BanCommand(VelocityPunishmentPlugin plugin) {
-        this.plugin = plugin;
-    }
-
-    @Override
-    public void execute(Invocation invocation) {
-        CommandSource source = invocation.source();
-        if (invocation.arguments().length < 1) {
-            source.sendMessage(plugin.getMessageProvider().provide("command.ban.usage", source, true).color(NamedTextColor.RED));
-            return;
-        }
-        var playerResolver = plugin.getPlayerResolver();
-        var punishmentManager = plugin.getPunishmentManager();
-        var parser = new PunishmentHelper();
-        playerResolver.getOrQueryPlayerUuid(invocation.arguments()[0], plugin.getService()).whenCompleteAsync((uuid, throwable) -> {
-            if (Util.sendErrorMessageIfErrorOccurred(invocation, source, uuid, throwable, plugin)) return;
-            TextComponent component = parser.parseComponent(1, invocation, Component.text("ban").color(NamedTextColor.DARK_RED));
-            punishmentManager.createPermanentBan(uuid, component).punish().whenCompleteAsync((ban, t) -> {
-                if (t != null) {
-                    t.printStackTrace();
-                    source.sendMessage(plugin.getMessageProvider().internalError(source, true));
-                } else {
-                    String uuidString = uuid.toString().toLowerCase();
-                    source.sendMessage(plugin.getMessageProvider().provide("command.ban.success", source, true, copyComponent(invocation.arguments()[0], plugin.getMessageProvider(), source).color(NamedTextColor.YELLOW).decorate(TextDecoration.BOLD),
-                            copyComponent(uuidString, plugin.getMessageProvider(), source).color(NamedTextColor.YELLOW).decorate(TextDecoration.BOLD),
-                            component).color(NamedTextColor.GREEN));
-                    source.sendMessage(plugin.getMessageProvider().provide("commands.general.punishment.id", source, true, copyComponent(ban.getPunishmentUuid().toString().toLowerCase(), plugin.getMessageProvider(), source).color(NamedTextColor.YELLOW)));
-                }
-            });
-        }, plugin.getService());
-    }
-
-
-    @Override
-    public List<String> suggest(Invocation invocation) {
-        var proxyServer = plugin.getServer();
-        return Util.getPlayerNames(invocation, proxyServer);
-    }
-
-
-    @Override
-    public boolean hasPermission(Invocation invocation) {
-        return invocation.source().hasPermission("punishment.command.ban");
     }
 }

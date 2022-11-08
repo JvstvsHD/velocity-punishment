@@ -24,6 +24,8 @@
 
 package de.jvstvshd.velocitypunishment.internal;
 
+import com.mojang.brigadier.arguments.StringArgumentType;
+import com.mojang.brigadier.context.CommandContext;
 import com.velocitypowered.api.command.CommandSource;
 import com.velocitypowered.api.command.SimpleCommand;
 import de.jvstvshd.velocitypunishment.api.message.MessageProvider;
@@ -43,7 +45,16 @@ import java.util.concurrent.ExecutorService;
 
 public class PunishmentHelper {
 
-    public Component buildPunishmentData(Punishment punishment, MessageProvider provider, CommandSource source) {
+    /**
+     * Instantiates a new punishment helper.
+     *
+     * @deprecated This class is not meant to be instantiated and should only be used statically.
+     */
+    @Deprecated(forRemoval = true)
+    public PunishmentHelper() {
+    }
+
+    public static Component buildPunishmentData(Punishment punishment, MessageProvider provider, CommandSource source) {
         return Component.text()
                 .append(provider.provide("helper.type", source, true).color(NamedTextColor.AQUA),
                         Component.text(punishment.getType().getName()).color(NamedTextColor.YELLOW),
@@ -58,7 +69,7 @@ public class PunishmentHelper {
                 .build();
     }
 
-    public Component buildPunishmentDataTemporal(TemporalPunishment punishment, MessageProvider provider, CommandSource source) {
+    public static Component buildPunishmentDataTemporal(TemporalPunishment punishment, MessageProvider provider, CommandSource source) {
         return punishment.isPermanent() ? Component.text("permanent").color(NamedTextColor.RED) : Component.text()
                 .append(provider.provide("helper.temporal.duration", source, true).color(NamedTextColor.AQUA),
                         Component.text(punishment.getDuration().getRemainingDuration()).color(NamedTextColor.YELLOW),
@@ -71,7 +82,7 @@ public class PunishmentHelper {
                 .build();
     }
 
-    public Optional<PunishmentDuration> parseDuration(int argumentIndex, SimpleCommand.Invocation invocation, MessageProvider provider) {
+    public static Optional<PunishmentDuration> parseDuration(int argumentIndex, SimpleCommand.Invocation invocation, MessageProvider provider) {
         try {
             return Optional.ofNullable(PunishmentDuration.parse(invocation.arguments()[argumentIndex]));
         } catch (IllegalArgumentException e) {
@@ -84,7 +95,23 @@ public class PunishmentHelper {
         }
     }
 
-    public TextComponent parseComponent(int startIndex, SimpleCommand.Invocation invocation, TextComponent def) {
+    public static Optional<PunishmentDuration> parseDuration(CommandContext<CommandSource> context, MessageProvider provider) {
+        if (!context.getArguments().containsKey("duration"))
+            return Optional.empty();
+        var duration = context.getArgument("duration", String.class);
+        try {
+            return Optional.ofNullable(PunishmentDuration.parse(duration));
+        } catch (IllegalArgumentException e) {
+            context.getSource().sendMessage(Component.text().append(Component.text("Cannot parse duration: ").color(NamedTextColor.RED),
+                    Component.text(e.getMessage()).color(NamedTextColor.YELLOW)));
+            return Optional.empty();
+        } catch (Exception e) {
+            context.getSource().sendMessage(provider.internalError(context.getSource(), true));
+            throw new RuntimeException(e);
+        }
+    }
+
+    public static TextComponent parseComponent(int startIndex, SimpleCommand.Invocation invocation, TextComponent def) {
         if (invocation.arguments().length == startIndex) {
             return def;
         }
@@ -95,7 +122,7 @@ public class PunishmentHelper {
         return LegacyComponentSerializer.legacyAmpersand().deserialize(builder.toString());
     }
 
-    public CompletableFuture<UUID> getPlayerUuid(int argumentIndex, ExecutorService service, PlayerResolver playerResolver, SimpleCommand.Invocation invocation) {
+    public static CompletableFuture<UUID> getPlayerUuid(int argumentIndex, ExecutorService service, PlayerResolver playerResolver, SimpleCommand.Invocation invocation) {
         String argument = invocation.arguments()[argumentIndex];
         if (argument.length() <= 16) {
             return playerResolver.getOrQueryPlayerUuid(argument, service);
@@ -108,5 +135,16 @@ public class PunishmentHelper {
         } else {
             return CompletableFuture.completedFuture(null);
         }
+    }
+
+    public static TextComponent parseReason(CommandContext<CommandSource> context, TextComponent def) {
+        if (!context.getArguments().containsKey("reason")) {
+            return def;
+        }
+        return LegacyComponentSerializer.legacyAmpersand().deserialize(StringArgumentType.getString(context, "reason"));
+    }
+
+    public static TextComponent parseReason(CommandContext<CommandSource> context) {
+        return parseReason(context, Component.text("No reason specified", NamedTextColor.RED));
     }
 }
