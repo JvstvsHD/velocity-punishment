@@ -39,7 +39,6 @@ tasks {
         )
     }
     shadowJar {
-        minimize()
         archiveBaseName.set("velocity-punishment-${rootProject.version}")
         finalizedBy(copyServerJar)
     }

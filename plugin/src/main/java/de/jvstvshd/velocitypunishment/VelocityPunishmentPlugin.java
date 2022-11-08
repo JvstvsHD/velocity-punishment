@@ -45,6 +45,7 @@ import de.jvstvshd.velocitypunishment.impl.DefaultPunishmentManager;
 import de.jvstvshd.velocitypunishment.listener.ChatListener;
 import de.jvstvshd.velocitypunishment.listener.ConnectListener;
 import de.jvstvshd.velocitypunishment.message.ResourceBundleMessageProvider;
+import org.postgresql.ds.PGSimpleDataSource;
 import org.slf4j.Logger;
 
 import java.io.IOException;
@@ -104,7 +105,7 @@ public class VelocityPunishmentPlugin implements VelocityPunishment {
 
         eventManager.register(this, new ConnectListener(this, Executors.newCachedThreadPool(), server, chatListener));
         eventManager.register(this, chatListener);
-
+        
         commandManager.register(commandManager.metaBuilder("ban").build(), new BanCommand(this));
         commandManager.register(commandManager.metaBuilder("tempban").build(), new TempbanCommand(this));
         commandManager.register(commandManager.metaBuilder("unban").build(), new UnbanCommand(this));
@@ -118,12 +119,18 @@ public class VelocityPunishmentPlugin implements VelocityPunishment {
     }
 
     private HikariDataSource createDataSource() {
+       /* var dbData = configurationManager.getConfiguration().getDataBaseData();
+        String jdbcUrl = "jdbc:mariadb://" + dbData.getHost() + ":" + dbData.getPort() + "/" + dbData.getDatabase() + "?user=" + dbData.getUsername() + "&password=" + dbData.getPassword();
+        var config = new HikariConfig();
+        config.setPoolName("velocity-punishment-hikari");
+        config.setJdbcUrl(jdbcUrl);
+        return new HikariDataSource(config);*/
         var dbData = configurationManager.getConfiguration().getDataBaseData();
         var properties = new Properties();
         properties.setProperty("dataSource.databaseName", dbData.getDatabase());
         properties.setProperty("dataSource.serverName", dbData.getHost());
         properties.setProperty("dataSource.portNumber", dbData.getPort());
-        properties.setProperty("dataSourceClassName", org.mariadb.jdbc.MariaDbDataSource.class.getName());
+        properties.setProperty("dataSourceClassName", PGSimpleDataSource.class.getName());
         properties.setProperty("dataSource.user", dbData.getUsername());
         properties.setProperty("dataSource.password", dbData.getPassword());
         var config = new HikariConfig(properties);
@@ -133,7 +140,7 @@ public class VelocityPunishmentPlugin implements VelocityPunishment {
 
     private void initDataSource() throws SQLException {
         try (Connection connection = dataSource.getConnection(); PreparedStatement statement =
-                connection.prepareStatement("CREATE TABLE IF NOT EXISTS velocity_punishment (uuid  VARCHAR (36), name VARCHAR (16), type VARCHAR (1000), expiration DATETIME (6), " +
+                connection.prepareStatement("CREATE TABLE IF NOT EXISTS velocity_punishment (uuid  VARCHAR (36), name VARCHAR (16), type VARCHAR (1000), expiration TIMESTAMP (6), " +
                         "reason VARCHAR (1000), punishment_id VARCHAR (36))")) {
             statement.execute();
         }
