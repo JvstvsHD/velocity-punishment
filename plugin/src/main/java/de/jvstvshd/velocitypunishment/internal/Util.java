@@ -25,7 +25,9 @@
 package de.jvstvshd.velocitypunishment.internal;
 
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.Sets;
+import com.mojang.brigadier.arguments.StringArgumentType;
+import com.mojang.brigadier.builder.RequiredArgumentBuilder;
+import com.mojang.brigadier.context.CommandContext;
 import com.velocitypowered.api.command.CommandSource;
 import com.velocitypowered.api.command.SimpleCommand;
 import com.velocitypowered.api.proxy.Player;
@@ -40,55 +42,27 @@ import net.kyori.adventure.text.event.ClickEvent;
 import net.kyori.adventure.text.event.HoverEvent;
 import net.kyori.adventure.text.event.HoverEventSource;
 import net.kyori.adventure.text.format.NamedTextColor;
+import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
 
 import java.util.*;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executor;
-import java.util.function.BiConsumer;
-import java.util.function.BinaryOperator;
-import java.util.function.Function;
-import java.util.function.Supplier;
-import java.util.stream.Collector;
 import java.util.stream.Collectors;
 
 public class Util {
 
     public static List<String> getPlayerNames(Collection<Player> players) {
-        return players.stream().collect(new Collector<Player, List<Player>, List<String>>() {
-            @Override
-            public Supplier<List<Player>> supplier() {
-                return ArrayList::new;
-            }
+        return players.stream().map(Player::getUsername).toList();
+    }
 
-            @Override
-            public BiConsumer<List<Player>, Player> accumulator() {
-                return List::add;
+    public static RequiredArgumentBuilder<CommandSource, String> playerArgument(ProxyServer server) {
+        return RequiredArgumentBuilder.<CommandSource, String>argument("player", StringArgumentType.word()).suggests((context, builder) -> {
+            Collection<Player> players = server.getAllPlayers();
+            for (Player player : players) {
+                builder.suggest(player.getUsername());
             }
-
-            @Override
-            public BinaryOperator<List<Player>> combiner() {
-                return (players, players2) -> {
-                    players.addAll(players2);
-                    return players;
-                };
-            }
-
-            @Override
-            public Function<List<Player>, List<String>> finisher() {
-                return players -> {
-                    List<String> strings = new ArrayList<>();
-                    for (Player player : players) {
-                        strings.add(player.getUsername());
-                    }
-                    return strings;
-                };
-            }
-
-            @Override
-            public Set<Characteristics> characteristics() {
-                return Sets.immutableEnumSet(Characteristics.UNORDERED);
-            }
+            return builder.buildFuture();
         });
     }
 
@@ -100,6 +74,17 @@ public class Util {
                     "(\\w{8})(\\w{4})(\\w{4})(\\w{4})(\\w{12})",
                     "$1-$2-$3-$4-$5"));
         }
+    }
+
+    public static TextComponent parseComponent(CommandContext<CommandSource> context, TextComponent def) {
+        if (context.getArguments().containsKey("reason")) {
+            return def;
+        }
+        return LegacyComponentSerializer.legacyAmpersand().deserialize(StringArgumentType.getString(context, "reason"));
+    }
+
+    public static TextComponent parseComponent(CommandContext<CommandSource> context) {
+        return parseComponent(context, Component.text("No reason specified", NamedTextColor.RED));
     }
 
     public static TextComponent copyComponent(String text, MessageProvider provider, CommandSource source) {
@@ -151,6 +136,21 @@ public class Util {
         }
         if (uuid == null) {
             source.sendMessage(Component.translatable().args(Component.text(invocation.arguments()[0]).color(NamedTextColor.YELLOW)).key("commands.general.not-found").color(NamedTextColor.RED));
+            return true;
+        }
+        return false;
+    }
+
+    public static boolean sendErrorMessageIfErrorOccurred(CommandContext<CommandSource> context, UUID uuid, Throwable throwable, VelocityPunishmentPlugin plugin) {
+        var source = context.getSource();
+        var player = context.getArgument("player", String.class);
+        if (throwable != null) {
+            source.sendMessage(plugin.getMessageProvider().internalError(source, true));
+            throwable.printStackTrace();
+            return true;
+        }
+        if (uuid == null) {
+            source.sendMessage(Component.translatable().args(Component.text(player).color(NamedTextColor.YELLOW)).key("commands.general.not-found").color(NamedTextColor.RED));
             return true;
         }
         return false;

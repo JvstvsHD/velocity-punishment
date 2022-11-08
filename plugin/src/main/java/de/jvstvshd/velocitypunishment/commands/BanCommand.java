@@ -24,8 +24,15 @@
 
 package de.jvstvshd.velocitypunishment.commands;
 
+import com.mojang.brigadier.Command;
+import com.mojang.brigadier.arguments.StringArgumentType;
+import com.mojang.brigadier.builder.LiteralArgumentBuilder;
+import com.mojang.brigadier.builder.RequiredArgumentBuilder;
+import com.mojang.brigadier.context.CommandContext;
+import com.velocitypowered.api.command.BrigadierCommand;
 import com.velocitypowered.api.command.CommandSource;
 import com.velocitypowered.api.command.SimpleCommand;
+import com.velocitypowered.api.proxy.Player;
 import de.jvstvshd.velocitypunishment.VelocityPunishmentPlugin;
 import de.jvstvshd.velocitypunishment.internal.PunishmentHelper;
 import de.jvstvshd.velocitypunishment.internal.Util;
@@ -34,11 +41,49 @@ import net.kyori.adventure.text.TextComponent;
 import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.format.TextDecoration;
 
+import java.util.Collection;
 import java.util.List;
 
 import static de.jvstvshd.velocitypunishment.internal.Util.copyComponent;
 
 public class BanCommand implements SimpleCommand {
+
+    public static BrigadierCommand banCommand(VelocityPunishmentPlugin plugin) {
+        var node = LiteralArgumentBuilder.<CommandSource>literal("ban")
+                .then(RequiredArgumentBuilder.<CommandSource, String>argument("player", StringArgumentType.word()).suggests((context, builder) -> {
+                            Collection<Player> players = plugin.getServer().getAllPlayers();
+                            for (Player player : players) {
+                                builder.suggest(player.getUsername());
+                            }
+                            return builder.buildFuture();
+                        }).executes(context -> execute(context, plugin))
+                        .then(RequiredArgumentBuilder.<CommandSource, String>argument("reason", StringArgumentType.greedyString()).executes(context -> execute(context, plugin))));
+        return new BrigadierCommand(node);
+    }
+
+    private static int execute(CommandContext<CommandSource> context, VelocityPunishmentPlugin plugin) {
+        var source = context.getSource();
+        var player = context.getArgument("player", String.class);
+        var reason = Util.parseComponent(context);
+        var playerResolver = plugin.getPlayerResolver();
+        var punishmentManager = plugin.getPunishmentManager();
+        playerResolver.getOrQueryPlayerUuid(player, plugin.getService()).whenCompleteAsync((uuid, throwable) -> {
+            if (Util.sendErrorMessageIfErrorOccurred(context, uuid, throwable, plugin)) return;
+            punishmentManager.createPermanentBan(uuid, reason).punish().whenComplete((ban, t) -> {
+                if (t != null) {
+                    t.printStackTrace();
+                    source.sendMessage(plugin.getMessageProvider().internalError(source, true));
+                } else {
+                    String uuidString = uuid.toString().toLowerCase();
+                    source.sendMessage(plugin.getMessageProvider().provide("command.ban.success", source, true, copyComponent(player, plugin.getMessageProvider(), source).color(NamedTextColor.YELLOW).decorate(TextDecoration.BOLD),
+                            copyComponent(uuidString, plugin.getMessageProvider(), source).color(NamedTextColor.YELLOW).decorate(TextDecoration.BOLD),
+                            reason).color(NamedTextColor.GREEN));
+                    source.sendMessage(plugin.getMessageProvider().provide("commands.general.punishment.id", source, true, copyComponent(ban.getPunishmentUuid().toString().toLowerCase(), plugin.getMessageProvider(), source).color(NamedTextColor.YELLOW)));
+                }
+            });
+        });
+        return Command.SINGLE_SUCCESS;
+    }
 
     private final VelocityPunishmentPlugin plugin;
 
