@@ -45,6 +45,7 @@ import de.jvstvshd.velocitypunishment.impl.DefaultPunishmentManager;
 import de.jvstvshd.velocitypunishment.listener.ChatListener;
 import de.jvstvshd.velocitypunishment.listener.ConnectListener;
 import de.jvstvshd.velocitypunishment.message.ResourceBundleMessageProvider;
+import net.kyori.adventure.text.Component;
 import org.postgresql.ds.PGSimpleDataSource;
 import org.slf4j.Logger;
 
@@ -69,6 +70,19 @@ public class VelocityPunishmentPlugin implements VelocityPunishment {
     private HikariDataSource dataSource;
     private PlayerResolver playerResolver;
     private MessageProvider messageProvider;
+
+    private static final String MUTES_DISABLED_STRING = """
+            Since 1.19.1, cancelling chat messages on proxy is not possible anymore. Therefore, we have to listen to the chat event on the actual game server. This means
+            that there has to be a spigot/paper extension to this plugin which is not yet available unless there's a possibility. Therefore all mute related features won't work at the moment.
+            If you use 1.19 or lower you will not be affected by this.The progress of the extension can be found here: https://github.com/JvstvsHD/velocity-punishment/issues/6""".trim();
+
+    /**
+     * Since 1.19.1, cancelling chat messages on proxy is not possible anymore. Therefore, we have to listen to the chat event on the actual game server. This means
+     * that there has to be a spigot/paper extension to this plugin which is not yet available unless there's a possibility. Therefore all mute related features are disabled for now.
+     * If you use 1.19 or lower you will not be affected by this.The progress of the extension can be found <a href=https://github.com/JvstvsHD/velocity-punishment/issues/6>here</a>.
+     * For this reason, every mute related feature is deprecated and marked as for removal until this extension is available.
+     */
+    public static final Component MUTES_DISABLED = Component.text(MUTES_DISABLED_STRING);
 
     @Inject
     public VelocityPunishmentPlugin(ProxyServer server, Logger logger, @DataDirectory Path dataDirectory) {
@@ -102,8 +116,8 @@ public class VelocityPunishmentPlugin implements VelocityPunishment {
 
     private void setup(CommandManager commandManager, EventManager eventManager) {
         ChatListener chatListener = new ChatListener(this);
-
         eventManager.register(this, new ConnectListener(this, Executors.newCachedThreadPool(), server, chatListener));
+        logger.info(MUTES_DISABLED_STRING);
         eventManager.register(this, chatListener);
 
         commandManager.register(BanCommand.banCommand(this));
@@ -112,7 +126,8 @@ public class VelocityPunishmentPlugin implements VelocityPunishment {
         //commandManager.register(commandManager.metaBuilder("tempban").build(), new TempbanCommand(this));
         commandManager.register(commandManager.metaBuilder("unban").build(), new UnbanCommand(this));
         commandManager.register(commandManager.metaBuilder("punishment").build(), new PunishmentCommand(this, chatListener));
-        commandManager.register(commandManager.metaBuilder("mute").build(), new MuteCommand(this, chatListener));
+        //commandManager.register(commandManager.metaBuilder("mute").build(), new MuteCommand(this, chatListener));
+        commandManager.register(MuteCommand.muteCommand(this, chatListener));
         commandManager.register(commandManager.metaBuilder("tempmute").build(), new TempmuteCommand(this, chatListener));
         commandManager.register(commandManager.metaBuilder("unmute").build(), new UnmuteCommand(this, chatListener));
         commandManager.register(commandManager.metaBuilder("kick").build(), new KickCommand(this));

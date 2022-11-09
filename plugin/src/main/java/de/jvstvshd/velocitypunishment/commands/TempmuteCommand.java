@@ -46,6 +46,10 @@ import java.util.concurrent.TimeoutException;
 
 import static de.jvstvshd.velocitypunishment.internal.Util.copyComponent;
 
+/**
+ * @see VelocityPunishmentPlugin#MUTES_DISABLED
+ */
+@Deprecated(forRemoval = true)
 public class TempmuteCommand implements SimpleCommand {
 
     private final ProxyServer proxyServer;

@@ -25,19 +25,14 @@
 package de.jvstvshd.velocitypunishment.commands;
 
 import com.mojang.brigadier.Command;
-import com.mojang.brigadier.arguments.StringArgumentType;
-import com.mojang.brigadier.builder.RequiredArgumentBuilder;
 import com.mojang.brigadier.context.CommandContext;
 import com.velocitypowered.api.command.BrigadierCommand;
 import com.velocitypowered.api.command.CommandSource;
-import com.velocitypowered.api.proxy.Player;
 import de.jvstvshd.velocitypunishment.VelocityPunishmentPlugin;
 import de.jvstvshd.velocitypunishment.internal.PunishmentHelper;
 import de.jvstvshd.velocitypunishment.internal.Util;
 import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.format.TextDecoration;
-
-import java.util.Collection;
 
 import static de.jvstvshd.velocitypunishment.internal.Util.copyComponent;
 
@@ -45,13 +40,7 @@ public class BanCommand {
 
     public static BrigadierCommand banCommand(VelocityPunishmentPlugin plugin) {
         var node = Util.permissibleCommand("ban", "velocitypunishment.command.ban")
-                .then(RequiredArgumentBuilder.<CommandSource, String>argument("player", StringArgumentType.word()).suggests((context, builder) -> {
-                            Collection<Player> players = plugin.getServer().getAllPlayers();
-                            for (Player player : players) {
-                                builder.suggest(player.getUsername());
-                            }
-                            return builder.buildFuture();
-                        }).executes(context -> execute(context, plugin))
+                .then(Util.playerArgument(plugin.getServer()).executes(context -> execute(context, plugin))
                         .then(Util.reasonArgument.executes(context -> execute(context, plugin))));
         return new BrigadierCommand(node);
     }

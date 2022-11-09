@@ -24,53 +24,52 @@
 
 package de.jvstvshd.velocitypunishment.commands;
 
+import com.mojang.brigadier.Command;
+import com.mojang.brigadier.context.CommandContext;
+import com.velocitypowered.api.command.BrigadierCommand;
 import com.velocitypowered.api.command.CommandSource;
-import com.velocitypowered.api.command.SimpleCommand;
 import de.jvstvshd.velocitypunishment.VelocityPunishmentPlugin;
 import de.jvstvshd.velocitypunishment.internal.PunishmentHelper;
 import de.jvstvshd.velocitypunishment.internal.Util;
 import de.jvstvshd.velocitypunishment.listener.ChatListener;
-import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.TextComponent;
 import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.format.TextDecoration;
 
-import java.util.List;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeoutException;
 
 import static de.jvstvshd.velocitypunishment.internal.Util.copyComponent;
 
-public class MuteCommand implements SimpleCommand {
+/**
+ * @see VelocityPunishmentPlugin#MUTES_DISABLED
+ */
+@Deprecated(forRemoval = true)
+public class MuteCommand {
 
-    private final VelocityPunishmentPlugin plugin;
-    private final ChatListener chatListener;
-
-    public MuteCommand(VelocityPunishmentPlugin plugin, ChatListener chatListener) {
-        this.plugin = plugin;
-        this.chatListener = chatListener;
+    public static BrigadierCommand muteCommand(VelocityPunishmentPlugin plugin, ChatListener chatListener) {
+        var node = Util.permissibleCommand("mute", "velocitypunishment.command.mute")
+                .then(Util.playerArgument(plugin.getServer()).executes(context -> execute(context, plugin, chatListener))
+                        .then(Util.reasonArgument.executes(context -> execute(context, plugin, chatListener))));
+        return new BrigadierCommand(node);
     }
 
-    @Override
-    public void execute(Invocation invocation) {
-        CommandSource source = invocation.source();
-        if (invocation.arguments().length < 1) {
-            source.sendMessage(plugin.getMessageProvider().provide("command.mute.usage", source, true).color(NamedTextColor.RED));
-            return;
-        }
+    private static int execute(CommandContext<CommandSource> context, VelocityPunishmentPlugin plugin, ChatListener chatListener) {
+        CommandSource source = context.getSource();
+        source.sendMessage(VelocityPunishmentPlugin.MUTES_DISABLED);
+        var player = context.getArgument("player", String.class);
         var playerResolver = plugin.getPlayerResolver();
         var punishmentManager = plugin.getPunishmentManager();
-        PunishmentHelper parser = new PunishmentHelper();
-        playerResolver.getOrQueryPlayerUuid(invocation.arguments()[0], plugin.getService()).whenCompleteAsync((uuid, throwable) -> {
-            if (Util.sendErrorMessageIfErrorOccurred(invocation, source, uuid, throwable, plugin)) return;
-            TextComponent reason = parser.parseComponent(1, invocation, Component.text("mute").color(NamedTextColor.DARK_RED));
+        playerResolver.getOrQueryPlayerUuid(player, plugin.getService()).whenCompleteAsync((uuid, throwable) -> {
+            if (Util.sendErrorMessageIfErrorOccurred(context, uuid, throwable, plugin)) return;
+            TextComponent reason = PunishmentHelper.parseReason(context);
             punishmentManager.createPermanentMute(uuid, reason).punish().whenComplete((mute, t) -> {
                 if (t != null) {
                     t.printStackTrace();
                     source.sendMessage(plugin.getMessageProvider().internalError(source, true));
                 } else {
                     String uuidString = uuid.toString().toLowerCase();
-                    source.sendMessage(plugin.getMessageProvider().provide("command.mute.success", source, true, copyComponent(invocation.arguments()[0], plugin.getMessageProvider(), source).color(NamedTextColor.YELLOW).decorate(TextDecoration.BOLD),
+                    source.sendMessage(plugin.getMessageProvider().provide("command.mute.success", source, true, copyComponent(player, plugin.getMessageProvider(), source).color(NamedTextColor.YELLOW).decorate(TextDecoration.BOLD),
                             copyComponent(uuidString, plugin.getMessageProvider(), source).color(NamedTextColor.YELLOW).decorate(TextDecoration.BOLD),
                             reason).color(NamedTextColor.GREEN));
                     source.sendMessage(plugin.getMessageProvider().provide("commands.general.punishment.id", source, true, copyComponent(mute.getPunishmentUuid().toString().toLowerCase(), plugin.getMessageProvider(), source).color(NamedTextColor.YELLOW)));
@@ -84,16 +83,6 @@ public class MuteCommand implements SimpleCommand {
                 }
             });
         }, plugin.getService());
-    }
-
-    @Override
-    public List<String> suggest(Invocation invocation) {
-        var server = plugin.getServer();
-        return Util.getPlayerNames(invocation, server);
-    }
-
-    @Override
-    public boolean hasPermission(Invocation invocation) {
-        return invocation.source().hasPermission("punishment.command.mute");
+        return Command.SINGLE_SUCCESS;
     }
 }
