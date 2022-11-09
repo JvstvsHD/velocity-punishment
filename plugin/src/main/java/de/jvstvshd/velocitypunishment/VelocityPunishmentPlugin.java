@@ -74,7 +74,7 @@ public class VelocityPunishmentPlugin implements VelocityPunishment {
     private static final String MUTES_DISABLED_STRING = """
             Since 1.19.1, cancelling chat messages on proxy is not possible anymore. Therefore, we have to listen to the chat event on the actual game server. This means
             that there has to be a spigot/paper extension to this plugin which is not yet available unless there's a possibility. Therefore all mute related features won't work at the moment.
-            If you use 1.19 or lower you will not be affected by this.The progress of the extension can be found here: https://github.com/JvstvsHD/velocity-punishment/issues/6""".trim();
+            If you use 1.19 or lower you will not be affected by this.The progress of the extension can be found here: https://github.com/JvstvsHD/velocity-punishment/issues/6""".replace("\n", " ");
 
     /**
      * Since 1.19.1, cancelling chat messages on proxy is not possible anymore. Therefore, we have to listen to the chat event on the actual game server. This means
@@ -130,7 +130,8 @@ public class VelocityPunishmentPlugin implements VelocityPunishment {
         commandManager.register(MuteCommand.muteCommand(this, chatListener));
         commandManager.register(commandManager.metaBuilder("tempmute").build(), new TempmuteCommand(this, chatListener));
         commandManager.register(commandManager.metaBuilder("unmute").build(), new UnmuteCommand(this, chatListener));
-        commandManager.register(commandManager.metaBuilder("kick").build(), new KickCommand(this));
+        //commandManager.register(commandManager.metaBuilder("kick").build(), new KickCommand(this));
+        commandManager.register(KickCommand.kickCommand(this));
 
         commandManager.register(commandManager.metaBuilder("whitelist").build(), new WhitelistCommand(this));
     }

@@ -91,8 +91,9 @@ public class ChatListener {
                 });
                 return;
             }
-            event.setResult(PlayerChatEvent.ChatResult.denied());
-            event.getPlayer().sendMessage(container.getMute().createFullReason(event.getPlayer()));
+            plugin.getLogger().info("A mute was detected but the message was not cancelled because it isn't possible.");
+            /*event.setResult(PlayerChatEvent.ChatResult.denied());
+            event.getPlayer().sendMessage(container.getMute().createFullReason(event.getPlayer()));*/
         } else {
             try {
                 update(player.getUniqueId());
