@@ -135,8 +135,8 @@ public class VelocityPunishmentPlugin implements VelocityPunishment {
         commandManager.register(commandManager.metaBuilder("tempmute").build(), new TempmuteCommand(this, chatListener));
         //commandManager.register(commandManager.metaBuilder("kick").build(), new KickCommand(this));
         commandManager.register(KickCommand.kickCommand(this));
-
-        commandManager.register(commandManager.metaBuilder("whitelist").build(), new WhitelistCommand(this));
+        //commandManager.register(commandManager.metaBuilder("whitelist").build(), new WhitelistCommand(this));
+        commandManager.register(WhitelistCommand.whitelistCommand(this));
     }
 
     private HikariDataSource createDataSource() {
