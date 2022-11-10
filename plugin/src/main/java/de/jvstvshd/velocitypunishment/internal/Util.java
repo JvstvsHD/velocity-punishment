@@ -84,6 +84,7 @@ public class Util {
                     String name = resultSet.getString("name");
                     builder.suggest(name);
                 }
+                plugin.getServer().getAllPlayers().stream().map(Player::getUsername).forEach(builder::suggest);
             }
             return builder.build();
         }, plugin.getService()));
