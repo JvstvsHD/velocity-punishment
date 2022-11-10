@@ -117,12 +117,12 @@ public class PunishmentCommand implements SimpleCommand {
         }
         UUID uuid;
         try {
-            uuid = Util.parseUuid(arguments[1]);
+            uuid = Util.parseUuid(arguments[0]);
         } catch (IllegalArgumentException e) {
             source.sendMessage(plugin.getMessageProvider().provide("command.punishment.uuid-parse-error", source, true, Component.text(arguments[0]).color(NamedTextColor.YELLOW)).color(NamedTextColor.RED));
             return;
         }
-        String option = arguments[0].toLowerCase(Locale.ROOT);
+        String option = arguments[1].toLowerCase(Locale.ROOT);
         if (!PUNISHMENT_OPTIONS.contains(option)) {
             source.sendMessage(plugin.getMessageProvider().provide("command.punishment.unknown-option", source, true, Component.text(option).color(NamedTextColor.YELLOW)).color(NamedTextColor.RED));
             return;

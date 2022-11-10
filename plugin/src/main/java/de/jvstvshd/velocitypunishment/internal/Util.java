@@ -44,6 +44,9 @@ import net.kyori.adventure.text.event.HoverEvent;
 import net.kyori.adventure.text.event.HoverEventSource;
 import net.kyori.adventure.text.format.NamedTextColor;
 
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
 import java.util.*;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CompletableFuture;
@@ -67,6 +70,23 @@ public class Util {
             }
             return builder.buildFuture();
         });
+    }
+
+    public static RequiredArgumentBuilder<CommandSource, String> punishmentRemoveArgument(VelocityPunishmentPlugin plugin) {
+        return RequiredArgumentBuilder.<CommandSource, String>argument("player", StringArgumentType.word()).suggests((context, builder) -> Util.executeAsync(() -> {
+            var input = builder.getRemainingLowerCase();
+            if (input.isBlank() || input.length() <= 2) return builder.build();
+            try (Connection connection = plugin.getDataSource().getConnection()) {
+                PreparedStatement statement = connection.prepareStatement("SELECT name FROM velocity_punishment WHERE name LIKE ?");
+                statement.setString(1, input + "%");
+                ResultSet resultSet = statement.executeQuery();
+                while (resultSet.next()) {
+                    String name = resultSet.getString("name");
+                    builder.suggest(name);
+                }
+            }
+            return builder.build();
+        }, plugin.getService()));
     }
 
     public static LiteralArgumentBuilder<CommandSource> permissibleCommand(String name, String permission) {

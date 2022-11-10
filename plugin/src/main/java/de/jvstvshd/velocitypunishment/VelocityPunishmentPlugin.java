@@ -124,12 +124,14 @@ public class VelocityPunishmentPlugin implements VelocityPunishment {
         //commandManager.register(commandManager.metaBuilder("ban").build(), new BanCommand(this));
         commandManager.register(TempbanCommand.tempbanCommand(this));
         //commandManager.register(commandManager.metaBuilder("tempban").build(), new TempbanCommand(this));
-        commandManager.register(commandManager.metaBuilder("unban").build(), new UnbanCommand(this));
+        //commandManager.register(commandManager.metaBuilder("unban").build(), new UnbanCommand(this));
+        //commandManager.register(UnbanCommand.unbanCommand(this));
+        commandManager.register(PunishmentRemovalCommand.unbanCommand(this));
+        commandManager.register(PunishmentRemovalCommand.unmuteCommand(this));
         commandManager.register(commandManager.metaBuilder("punishment").build(), new PunishmentCommand(this, chatListener));
         //commandManager.register(commandManager.metaBuilder("mute").build(), new MuteCommand(this, chatListener));
         commandManager.register(MuteCommand.muteCommand(this, chatListener));
         commandManager.register(commandManager.metaBuilder("tempmute").build(), new TempmuteCommand(this, chatListener));
-        commandManager.register(commandManager.metaBuilder("unmute").build(), new UnmuteCommand(this, chatListener));
         //commandManager.register(commandManager.metaBuilder("kick").build(), new KickCommand(this));
         commandManager.register(KickCommand.kickCommand(this));
 

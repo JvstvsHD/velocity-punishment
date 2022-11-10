@@ -28,6 +28,7 @@ import com.mojang.brigadier.arguments.StringArgumentType;
 import com.mojang.brigadier.context.CommandContext;
 import com.velocitypowered.api.command.CommandSource;
 import com.velocitypowered.api.command.SimpleCommand;
+import de.jvstvshd.velocitypunishment.VelocityPunishmentPlugin;
 import de.jvstvshd.velocitypunishment.api.message.MessageProvider;
 import de.jvstvshd.velocitypunishment.api.punishment.Punishment;
 import de.jvstvshd.velocitypunishment.api.punishment.PunishmentDuration;
@@ -126,6 +127,21 @@ public class PunishmentHelper {
         String argument = invocation.arguments()[argumentIndex];
         if (argument.length() <= 16) {
             return playerResolver.getOrQueryPlayerUuid(argument, service);
+        } else if (argument.length() <= 36) {
+            try {
+                return CompletableFuture.completedFuture(Util.parseUuid(argument));
+            } catch (IllegalArgumentException e) {
+                return CompletableFuture.completedFuture(null);
+            }
+        } else {
+            return CompletableFuture.completedFuture(null);
+        }
+    }
+
+    public static CompletableFuture<UUID> getPlayerUuid(CommandContext<CommandSource> context, VelocityPunishmentPlugin plugin) {
+        var argument = context.getArgument("player", String.class);
+        if (argument.length() <= 16) {
+            return plugin.getPlayerResolver().getOrQueryPlayerUuid(argument, plugin.getService());
         } else if (argument.length() <= 36) {
             try {
                 return CompletableFuture.completedFuture(Util.parseUuid(argument));
