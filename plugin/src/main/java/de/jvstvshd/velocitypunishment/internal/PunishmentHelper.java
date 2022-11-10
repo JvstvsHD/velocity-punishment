@@ -33,7 +33,6 @@ import de.jvstvshd.velocitypunishment.api.message.MessageProvider;
 import de.jvstvshd.velocitypunishment.api.punishment.Punishment;
 import de.jvstvshd.velocitypunishment.api.punishment.PunishmentDuration;
 import de.jvstvshd.velocitypunishment.api.punishment.TemporalPunishment;
-import de.jvstvshd.velocitypunishment.api.punishment.util.PlayerResolver;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.TextComponent;
 import net.kyori.adventure.text.format.NamedTextColor;
@@ -42,7 +41,6 @@ import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ExecutorService;
 
 public class PunishmentHelper {
 
@@ -83,6 +81,7 @@ public class PunishmentHelper {
                 .build();
     }
 
+    @Deprecated(forRemoval = true)
     public static Optional<PunishmentDuration> parseDuration(int argumentIndex, SimpleCommand.Invocation invocation, MessageProvider provider) {
         try {
             return Optional.ofNullable(PunishmentDuration.parse(invocation.arguments()[argumentIndex]));
@@ -96,6 +95,7 @@ public class PunishmentHelper {
         }
     }
 
+    @Deprecated(forRemoval = true)
     public static Optional<PunishmentDuration> parseDuration(CommandContext<CommandSource> context, MessageProvider provider) {
         if (!context.getArguments().containsKey("duration"))
             return Optional.empty();
@@ -112,6 +112,7 @@ public class PunishmentHelper {
         }
     }
 
+    @Deprecated(forRemoval = true)
     public static TextComponent parseComponent(int startIndex, SimpleCommand.Invocation invocation, TextComponent def) {
         if (invocation.arguments().length == startIndex) {
             return def;
@@ -121,21 +122,6 @@ public class PunishmentHelper {
             builder.append(invocation.arguments()[i]).append(" ");
         }
         return LegacyComponentSerializer.legacyAmpersand().deserialize(builder.toString());
-    }
-
-    public static CompletableFuture<UUID> getPlayerUuid(int argumentIndex, ExecutorService service, PlayerResolver playerResolver, SimpleCommand.Invocation invocation) {
-        String argument = invocation.arguments()[argumentIndex];
-        if (argument.length() <= 16) {
-            return playerResolver.getOrQueryPlayerUuid(argument, service);
-        } else if (argument.length() <= 36) {
-            try {
-                return CompletableFuture.completedFuture(Util.parseUuid(argument));
-            } catch (IllegalArgumentException e) {
-                return CompletableFuture.completedFuture(null);
-            }
-        } else {
-            return CompletableFuture.completedFuture(null);
-        }
     }
 
     public static CompletableFuture<UUID> getPlayerUuid(CommandContext<CommandSource> context, VelocityPunishmentPlugin plugin) {

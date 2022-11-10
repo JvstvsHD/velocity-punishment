@@ -56,7 +56,7 @@ import java.util.stream.Collectors;
 public class Util {
 
     public static final RequiredArgumentBuilder<CommandSource, String> reasonArgument = RequiredArgumentBuilder.argument("reason", StringArgumentType.greedyString());
-    public static RequiredArgumentBuilder<CommandSource, String> durationArgument = RequiredArgumentBuilder.argument("duration", StringArgumentType.word());
+    public static final RequiredArgumentBuilder<CommandSource, String> durationArgument = RequiredArgumentBuilder.argument("duration", StringArgumentType.word());
 
     public static List<String> getPlayerNames(Collection<Player> players) {
         return players.stream().map(Player::getUsername).toList();
@@ -143,19 +143,6 @@ public class Util {
 
     public static String trimUuid(UUID origin) {
         return origin.toString().toLowerCase().replace("-", "");
-    }
-
-    public static boolean sendErrorMessageIfErrorOccurred(SimpleCommand.Invocation invocation, CommandSource source, UUID uuid, Throwable throwable, VelocityPunishmentPlugin plugin) {
-        if (throwable != null) {
-            source.sendMessage(plugin.getMessageProvider().internalError(source, true));
-            throwable.printStackTrace();
-            return true;
-        }
-        if (uuid == null) {
-            source.sendMessage(Component.translatable().args(Component.text(invocation.arguments()[0]).color(NamedTextColor.YELLOW)).key("commands.general.not-found").color(NamedTextColor.RED));
-            return true;
-        }
-        return false;
     }
 
     public static boolean sendErrorMessageIfErrorOccurred(CommandContext<CommandSource> context, UUID uuid, Throwable throwable, VelocityPunishmentPlugin plugin) {

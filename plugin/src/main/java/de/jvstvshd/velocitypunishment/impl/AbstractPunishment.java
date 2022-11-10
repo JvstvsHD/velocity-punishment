@@ -127,10 +127,6 @@ public abstract class AbstractPunishment implements Punishment {
                 '}';
     }
 
-    protected void setValidity(boolean validity) {
-        this.validity = validity;
-    }
-
     protected void checkValidity() {
         if (!isValid()) {
             throw new IllegalStateException("punishment is invalid");

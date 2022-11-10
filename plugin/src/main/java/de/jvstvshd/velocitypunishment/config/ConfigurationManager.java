@@ -53,7 +53,9 @@ public class ConfigurationManager {
         }
         try (FileChannel channel = FileChannel.open(path)) {
             if (channel.size() <= 0 || write) {
-                objectMapper.writerWithDefaultPrettyPrinter().writeValues(path.toFile()).write(new ConfigData());
+                try (var writer = objectMapper.writerWithDefaultPrettyPrinter().writeValues(path.toFile())) {
+                    writer.write(new ConfigData());
+                }
             }
         }
 
@@ -65,7 +67,9 @@ public class ConfigurationManager {
     }
 
     public void save() throws IOException {
-        objectMapper.writerWithDefaultPrettyPrinter().writeValues(path.toFile()).write(configData);
+        try (var writer = objectMapper.writerWithDefaultPrettyPrinter().writeValues(path.toFile())) {
+            writer.write(configData);
+        }
     }
 
     public ConfigData getConfiguration() {
