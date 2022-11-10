@@ -7,7 +7,7 @@ plugins {
 }
 
 group = "de.jvstvshd.punishment.velocity"
-version = "1.1.0"
+version = "1.2.0-SNAPSHOT"
 
 subprojects {
     apply {
@@ -22,9 +22,9 @@ subprojects {
     }
 
     repositories {
+        mavenCentral()
         maven("https://nexus.velocitypowered.com/repository/maven-public/")
         maven("https://papermc.io/repo/repository/maven-public/")
-        mavenCentral()
     }
 }
 

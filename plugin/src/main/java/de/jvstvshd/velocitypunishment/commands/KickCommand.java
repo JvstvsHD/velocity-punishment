@@ -24,7 +24,10 @@
 
 package de.jvstvshd.velocitypunishment.commands;
 
-import com.velocitypowered.api.command.SimpleCommand;
+import com.mojang.brigadier.Command;
+import com.mojang.brigadier.context.CommandContext;
+import com.velocitypowered.api.command.BrigadierCommand;
+import com.velocitypowered.api.command.CommandSource;
 import com.velocitypowered.api.proxy.Player;
 import de.jvstvshd.velocitypunishment.VelocityPunishmentPlugin;
 import de.jvstvshd.velocitypunishment.internal.PunishmentHelper;
@@ -34,43 +37,35 @@ import net.kyori.adventure.text.format.NamedTextColor;
 
 import java.util.Optional;
 
-public class KickCommand implements SimpleCommand {
+public class KickCommand {
 
-    private final VelocityPunishmentPlugin plugin;
-
-    public KickCommand(VelocityPunishmentPlugin plugin) {
-        this.plugin = plugin;
+    public static BrigadierCommand kickCommand(VelocityPunishmentPlugin plugin) {
+        var node = Util.permissibleCommand("kick", "velocitypunishment.command.kick")
+                .then(Util.playerArgument(plugin.getServer()).executes(context -> execute(context, plugin))
+                        .then(Util.reasonArgument.executes(context -> execute(context, plugin))));
+        return new BrigadierCommand(node);
     }
 
-    @Override
-    public void execute(Invocation invocation) {
-        var source = invocation.source();
-        if (invocation.arguments().length < 1) {
-            source.sendMessage(plugin.getMessageProvider().provide("command.kick.usage", source, true).color(NamedTextColor.RED));
-            return;
-        }
-        var playerArgument = invocation.arguments()[0];
+    private static int execute(CommandContext<CommandSource> context, VelocityPunishmentPlugin plugin) {
+        var source = context.getSource();
+        var playerArgument = context.getArgument("player", String.class);
         Optional<Player> playerOptional = plugin.getServer().getPlayer(playerArgument);
         if (playerOptional.isEmpty()) {
             try {
                 playerOptional = plugin.getServer().getPlayer(Util.parseUuid(playerArgument));
             } catch (Exception e) {
                 source.sendMessage(plugin.getMessageProvider().internalError(source, true));
-                return;
+                return 0;
             }
         }
         if (playerOptional.isEmpty()) {
             source.sendMessage(plugin.getMessageProvider().provide("commands.general.not-found", source, true, Component.text(playerArgument).color(NamedTextColor.YELLOW)));
-            return;
+            return 0;
         }
         var player = playerOptional.get();
-        Component reason = new PunishmentHelper().parseComponent(1, invocation, Component.text("Kick").color(NamedTextColor.DARK_RED));
+        Component reason = PunishmentHelper.parseReason(context);
         player.disconnect(reason);
-        invocation.source().sendMessage(plugin.getMessageProvider().provide("command.kick.success", source, true, Component.text(player.getUsername()).color(NamedTextColor.YELLOW), reason));
-    }
-
-    @Override
-    public boolean hasPermission(Invocation invocation) {
-        return invocation.source().hasPermission("punishment.command.kick");
+        source.sendMessage(plugin.getMessageProvider().provide("command.kick.success", source, true, Component.text(player.getUsername()).color(NamedTextColor.YELLOW), reason));
+        return Command.SINGLE_SUCCESS;
     }
 }

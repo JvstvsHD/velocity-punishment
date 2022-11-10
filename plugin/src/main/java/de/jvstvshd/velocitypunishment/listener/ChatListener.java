@@ -46,6 +46,10 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
+/**
+ * @see VelocityPunishmentPlugin#MUTES_DISABLED
+ */
+@Deprecated(forRemoval = true)
 public class ChatListener {
 
     private final Map<UUID, MuteContainer> mutes;
@@ -87,8 +91,9 @@ public class ChatListener {
                 });
                 return;
             }
-            event.setResult(PlayerChatEvent.ChatResult.denied());
-            event.getPlayer().sendMessage(container.getMute().createFullReason(event.getPlayer()));
+            plugin.getLogger().info("A mute was detected but the message was not cancelled because it isn't possible.");
+            /*event.setResult(PlayerChatEvent.ChatResult.denied());
+            event.getPlayer().sendMessage(container.getMute().createFullReason(event.getPlayer()));*/
         } else {
             try {
                 update(player.getUniqueId());
@@ -120,12 +125,20 @@ public class ChatListener {
         return mutes;
     }
 
+    /**
+     * @see VelocityPunishmentPlugin#MUTES_DISABLED
+     */
+    @Deprecated(forRemoval = true)
     public enum MuteType {
         MUTED,
         NOT_MUTED,
         LOADING
     }
 
+    /**
+     * @see VelocityPunishmentPlugin#MUTES_DISABLED
+     */
+    @Deprecated(forRemoval = true)
     public static class MuteContainer {
         private MuteType type;
         private Mute mute;

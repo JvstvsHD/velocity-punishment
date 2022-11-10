@@ -45,6 +45,8 @@ import de.jvstvshd.velocitypunishment.impl.DefaultPunishmentManager;
 import de.jvstvshd.velocitypunishment.listener.ChatListener;
 import de.jvstvshd.velocitypunishment.listener.ConnectListener;
 import de.jvstvshd.velocitypunishment.message.ResourceBundleMessageProvider;
+import net.kyori.adventure.text.Component;
+import org.postgresql.ds.PGSimpleDataSource;
 import org.slf4j.Logger;
 
 import java.io.IOException;
@@ -68,6 +70,19 @@ public class VelocityPunishmentPlugin implements VelocityPunishment {
     private HikariDataSource dataSource;
     private PlayerResolver playerResolver;
     private MessageProvider messageProvider;
+
+    private static final String MUTES_DISABLED_STRING = """
+            Since 1.19.1, cancelling chat messages on proxy is not possible anymore. Therefore, we have to listen to the chat event on the actual game server. This means
+            that there has to be a spigot/paper extension to this plugin which is not yet available unless there's a possibility. Therefore all mute related features won't work at the moment.
+            If you use 1.19 or lower you will not be affected by this.The progress of the extension can be found here: https://github.com/JvstvsHD/velocity-punishment/issues/6""".replace("\n", " ");
+
+    /**
+     * Since 1.19.1, cancelling chat messages on proxy is not possible anymore. Therefore, we have to listen to the chat event on the actual game server. This means
+     * that there has to be a spigot/paper extension to this plugin which is not yet available unless there's a possibility. Therefore all mute related features are disabled for now.
+     * If you use 1.19 or lower you will not be affected by this.The progress of the extension can be found <a href=https://github.com/JvstvsHD/velocity-punishment/issues/6>here</a>.
+     * For this reason, every mute related feature is deprecated and marked as for removal until this extension is available.
+     */
+    public static final Component MUTES_DISABLED = Component.text(MUTES_DISABLED_STRING);
 
     @Inject
     public VelocityPunishmentPlugin(ProxyServer server, Logger logger, @DataDirectory Path dataDirectory) {
@@ -101,29 +116,35 @@ public class VelocityPunishmentPlugin implements VelocityPunishment {
 
     private void setup(CommandManager commandManager, EventManager eventManager) {
         ChatListener chatListener = new ChatListener(this);
-
         eventManager.register(this, new ConnectListener(this, Executors.newCachedThreadPool(), server, chatListener));
+        logger.info(MUTES_DISABLED_STRING);
         eventManager.register(this, chatListener);
 
-        commandManager.register(commandManager.metaBuilder("ban").build(), new BanCommand(this));
-        commandManager.register(commandManager.metaBuilder("tempban").build(), new TempbanCommand(this));
-        commandManager.register(commandManager.metaBuilder("unban").build(), new UnbanCommand(this));
-        commandManager.register(commandManager.metaBuilder("punishment").build(), new PunishmentCommand(this, chatListener));
-        commandManager.register(commandManager.metaBuilder("mute").build(), new MuteCommand(this, chatListener));
-        commandManager.register(commandManager.metaBuilder("tempmute").build(), new TempmuteCommand(this, chatListener));
-        commandManager.register(commandManager.metaBuilder("unmute").build(), new UnmuteCommand(this, chatListener));
-        commandManager.register(commandManager.metaBuilder("kick").build(), new KickCommand(this));
+        commandManager.register(BanCommand.banCommand(this));
 
-        commandManager.register(commandManager.metaBuilder("whitelist").build(), new WhitelistCommand(this));
+        commandManager.register(TempbanCommand.tempbanCommand(this));
+        commandManager.register(PunishmentRemovalCommand.unbanCommand(this));
+        commandManager.register(PunishmentRemovalCommand.unmuteCommand(this));
+        commandManager.register(PunishmentCommand.punishmentCommand(this));
+        commandManager.register(MuteCommand.muteCommand(this, chatListener));
+        commandManager.register(commandManager.metaBuilder("tempmute").build(), new TempmuteCommand(this, chatListener));
+        commandManager.register(KickCommand.kickCommand(this));
+        commandManager.register(WhitelistCommand.whitelistCommand(this));
     }
 
     private HikariDataSource createDataSource() {
+       /* var dbData = configurationManager.getConfiguration().getDataBaseData();
+        String jdbcUrl = "jdbc:mariadb://" + dbData.getHost() + ":" + dbData.getPort() + "/" + dbData.getDatabase() + "?user=" + dbData.getUsername() + "&password=" + dbData.getPassword();
+        var config = new HikariConfig();
+        config.setPoolName("velocity-punishment-hikari");
+        config.setJdbcUrl(jdbcUrl);
+        return new HikariDataSource(config);*/
         var dbData = configurationManager.getConfiguration().getDataBaseData();
         var properties = new Properties();
         properties.setProperty("dataSource.databaseName", dbData.getDatabase());
         properties.setProperty("dataSource.serverName", dbData.getHost());
         properties.setProperty("dataSource.portNumber", dbData.getPort());
-        properties.setProperty("dataSourceClassName", org.mariadb.jdbc.MariaDbDataSource.class.getName());
+        properties.setProperty("dataSourceClassName", PGSimpleDataSource.class.getName());
         properties.setProperty("dataSource.user", dbData.getUsername());
         properties.setProperty("dataSource.password", dbData.getPassword());
         var config = new HikariConfig(properties);
@@ -133,7 +154,7 @@ public class VelocityPunishmentPlugin implements VelocityPunishment {
 
     private void initDataSource() throws SQLException {
         try (Connection connection = dataSource.getConnection(); PreparedStatement statement =
-                connection.prepareStatement("CREATE TABLE IF NOT EXISTS velocity_punishment (uuid  VARCHAR (36), name VARCHAR (16), type VARCHAR (1000), expiration DATETIME (6), " +
+                connection.prepareStatement("CREATE TABLE IF NOT EXISTS velocity_punishment (uuid  VARCHAR (36), name VARCHAR (16), type VARCHAR (1000), expiration TIMESTAMP (6), " +
                         "reason VARCHAR (1000), punishment_id VARCHAR (36))")) {
             statement.execute();
         }

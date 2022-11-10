@@ -116,7 +116,6 @@ public interface PunishmentManager {
 
     /**
      * Checks whether the player specified via <code>playerUuid</code>. By default this method must not be overwritten and throws an {@link UnsupportedOperationException}
-     *
      * @param playerUuid the uuid of the player
      * @param executor   an {@link Executor} used for async operations
      * @return a {@link CompletableFuture}, being completed with true if this player is banned and false if not

@@ -127,7 +127,7 @@ public class PunishmentDuration implements Comparable<PunishmentDuration> {
         return Timestamp.valueOf(expiration());
     }
 
-    public static Timestamp MAX = Timestamp.valueOf(LocalDateTime.of(9999, 12, 31, 23, 59, 59));
+    public static final Timestamp MAX = Timestamp.valueOf(LocalDateTime.of(9999, 12, 31, 23, 59, 59));
 
     @Override
     public String toString() {

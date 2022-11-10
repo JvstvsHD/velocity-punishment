@@ -19,13 +19,19 @@ Velocity punishment is a punishment plugin designed for
 2. Put the downloaded file into the ```plugins``` folder of your server.
 3. (Re-)Start the server.
 
-## Punishment API
+## Mutes
 
-### Installation
+With the 1.19.1, minecraft's chat system was
+changed ([detailed explanation](https://gist.github.com/kennytv/ed783dd244ca0321bbd882c347892874)).
+Since then, it is no longer possible to deny chat messages in the ChatEvent of Velocity due to the signed chat messages.
+This is why the chat listener does not block any messages anymore which means mutes are effectively useless. A solution
+to this problem is developing an extension plugin for the actual game servers where cancelling these messages is still
+possible.<br>
+Related issue: #6<br>
+For further information about 1.19.1, please refer to
+the [official release notes](https://www.minecraft.net/en-us/article/minecraft-java-edition-1-19-1)
 
-Replace ```{version}``` with the current version, e.g. 1.0.0. Note that the artifacts are not yet published.
-
-### Commands
+## Commands
 
 <b>legend:</b>
 
@@ -35,7 +41,7 @@ Replace ```{version}``` with the current version, e.g. 1.0.0. Note that the arti
 - reason means a reason with legacy color codes
 - duration as argument name means a [duration](#duration)
 
-#### Command overview
+### Command overview
 
 - **/ban \<player\> \[reason\]** bans a player permanently for the given or the default reason
 - **/mute \<player\> \[reason\]** mutes a player permanently for the given or the default reason
@@ -57,6 +63,13 @@ h - hour(s)<br>
 d - day(s)<br>
 These value can be composed, all of them can be omitted.<br>
 Example: <b>1d12h15m30s</b> means a duration of 1 day, 12 hours, 15 minutes and 30 seconds.
+
+## Punishment API
+
+### Installation
+
+Replace ```{version}``` with the current version, e.g. 1.0.0. Note that the artifacts are not yet published. This
+section is currently subject to change.
 
 #### Gradle (kotlin)
 

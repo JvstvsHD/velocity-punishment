@@ -31,21 +31,19 @@ tasks.getByName<Test>("test") {
 
 
 tasks {
+    val copyServerJar = task<Copy>("copyServerJar") {
+        from(shadowJar)
+        into(
+            project.findProperty("velocity-plugins-directory")?.toString() ?: projectDir.toPath().resolve("build/libs")
+                .toString()
+        )
+    }
     shadowJar {
-        minimize()
-        archiveBaseName.set("velocity-punishment")
+        archiveBaseName.set("velocity-punishment-${rootProject.version}")
+        finalizedBy(copyServerJar)
     }
     build {
         dependsOn(shadowJar)
-    }
-    register<Copy>("copyToServer") {
-        val path = System.getenv("DEST") ?: ""
-        if (path.isEmpty()) {
-            println("no target directory was set")
-            return@register
-        }
-        from(shadowJar)
-        destinationDir = File(path)
     }
 }
 

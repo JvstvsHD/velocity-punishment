@@ -10,13 +10,13 @@ dependencyResolutionManagement {
             library("luckperms-api", "net.luckperms", "api").version("5.4")
             library("jackson-databind", "com.fasterxml.jackson.core", "jackson-databind").version("2.13.4")
 
-            library("mariadb", "org.mariadb.jdbc", "mariadb-java-client").version("3.0.6")
+            library("postgresql", "org.postgresql", "postgresql").version("42.5.0")
             library("hikari", "com.zaxxer", "HikariCP").version("5.0.1")
-            bundle("database", listOf("mariadb", "hikari"))
+            bundle("database", listOf("postgresql", "hikari"))
 
-            val jUnitVersion = version("junit", "5.9.0")
-            library("junit-jupiter-api", "org.junit.jupiter", "junit-jupiter-api").version(jUnitVersion)
-            library("junit-jupiter-engine", "org.junit.jupiter", "junit-jupiter-engine").version(jUnitVersion)
+            val jUnitVersion = version("junit", "5.9.1")
+            library("junit-jupiter-api", "org.junit.jupiter", "junit-jupiter-api").versionRef(jUnitVersion)
+            library("junit-jupiter-engine", "org.junit.jupiter", "junit-jupiter-engine").versionRef(jUnitVersion)
         }
     }
 }

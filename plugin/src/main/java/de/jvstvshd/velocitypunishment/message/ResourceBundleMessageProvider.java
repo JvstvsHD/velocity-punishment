@@ -53,7 +53,7 @@ import java.util.stream.Stream;
 public class ResourceBundleMessageProvider implements MessageProvider {
 
     private final ConfigData configData;
-    private LocaleProvider localeProvider;
+    private final LocaleProvider localeProvider;
 
     static {
         try {
@@ -170,14 +170,6 @@ public class ResourceBundleMessageProvider implements MessageProvider {
             return withPrefix(provide(key, source, args), source);
         }
         return provide(key, source, args);
-    }
-
-    public LocaleProvider getLocaleProvider() {
-        return localeProvider;
-    }
-
-    public void setLocaleProvider(LocaleProvider localeProvider) {
-        this.localeProvider = localeProvider;
     }
 
     public static class LocaleProvider {
