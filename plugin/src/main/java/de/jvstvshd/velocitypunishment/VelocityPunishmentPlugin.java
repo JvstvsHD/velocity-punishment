@@ -133,12 +133,6 @@ public class VelocityPunishmentPlugin implements VelocityPunishment {
     }
 
     private HikariDataSource createDataSource() {
-       /* var dbData = configurationManager.getConfiguration().getDataBaseData();
-        String jdbcUrl = "jdbc:mariadb://" + dbData.getHost() + ":" + dbData.getPort() + "/" + dbData.getDatabase() + "?user=" + dbData.getUsername() + "&password=" + dbData.getPassword();
-        var config = new HikariConfig();
-        config.setPoolName("velocity-punishment-hikari");
-        config.setJdbcUrl(jdbcUrl);
-        return new HikariDataSource(config);*/
         var dbData = configurationManager.getConfiguration().getDataBaseData();
         var properties = new Properties();
         properties.setProperty("dataSource.databaseName", dbData.getDatabase());

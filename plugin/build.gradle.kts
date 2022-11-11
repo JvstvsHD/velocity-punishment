@@ -4,6 +4,9 @@ plugins {
     `java-library`
 }
 
+version = rootProject.version
+description = "A plugin handling all your needs for punishments on Velocity, based on the velocity-punishment-api."
+
 repositories {
     mavenCentral()
 }
@@ -58,6 +61,7 @@ tasks {
     }
 }
 
+/*
 publishing {
     repositories {
         maven("https://s01.oss.sonatype.org/service/local/staging/deploy/maven2/") {
@@ -71,7 +75,7 @@ publishing {
     publications {
         register<MavenPublication>(project.name) {
             from(components["java"])
-            groupId = project.group.toString().toLowerCase()
+            groupId = rootProject.group.toString().toLowerCase()
             artifactId = project.name.toLowerCase()
             version = project.version.toString()
             pom {
@@ -96,4 +100,4 @@ publishing {
             }
         }
     }
-}
+}*/

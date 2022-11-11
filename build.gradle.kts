@@ -3,16 +3,18 @@ import org.cadixdev.gradle.licenser.Licenser
 plugins {
     java
     `maven-publish`
+    signing
     id("org.cadixdev.licenser") version "0.6.1"
 }
 
-group = "de.jvstvshd.punishment.velocity"
+group = "de.jvstvshd.velocitypunishment"
 version = "1.2.0-SNAPSHOT"
 
 subprojects {
     apply {
         plugin<Licenser>()
         plugin<MavenPublishPlugin>()
+        plugin<SigningPlugin>()
     }
 
     license {
@@ -25,6 +27,64 @@ subprojects {
         mavenCentral()
         maven("https://nexus.velocitypowered.com/repository/maven-public/")
         maven("https://papermc.io/repo/repository/maven-public/")
+    }
+    tasks {
+        gradle.projectsEvaluated {
+
+            signing {
+                sign(publishing.publications)
+            }
+
+            publishing {
+                repositories {
+                    maven(
+                        if (project.version.toString().endsWith("-SNAPSHOT"))
+                            "https://s01.oss.sonatype.org/content/repositories/snapshots/" else "https://s01.oss.sonatype.org/service/local/staging/deploy/maven2/"
+                    ) {
+                        name = "ossrh"
+                        credentials {
+                            username =
+                                project.findProperty("sonatypeUsername") as String?
+                                    ?: System.getenv("SONATYPE_USERNAME")
+                            password =
+                                project.findProperty("sonatypePassword") as String?
+                                    ?: System.getenv("SONATYPE_PASSWORD")
+                        }
+                    }
+                }
+                publications {
+                    create<MavenPublication>(rootProject.name) {
+                        groupId = rootProject.group.toString().toLowerCase()
+                        artifactId = "velocity-punishment-${project.name}"
+                        version = project.version.toString()
+
+                        pom {
+                            name.set(project.name)
+                            description.set(project.description)
+                            url.set("https://github.com/JvstvsHD/velocity-punishment")
+
+                            developers {
+                                developer {
+                                    name.set("JvstvsHD")
+                                }
+                            }
+
+                            licenses {
+                                license {
+                                    name.set("GNU General Public License v3.0")
+                                    url.set("https://www.gnu.org/licenses/gpl-3.0.en.html")
+                                }
+                            }
+
+                            scm {
+                                connection.set("scm:git:git://github.com/JvstvsHD/velocity-punishment.git")
+                                url.set("https://github.com/JvstvsHD/velocity-punishment/tree/main")
+                            }
+                        }
+                    }
+                }
+            }
+        }
     }
 }
 
