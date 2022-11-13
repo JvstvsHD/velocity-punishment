@@ -32,6 +32,8 @@ import com.velocitypowered.api.event.proxy.ProxyInitializeEvent;
 import com.velocitypowered.api.plugin.Plugin;
 import com.velocitypowered.api.plugin.annotation.DataDirectory;
 import com.velocitypowered.api.proxy.ProxyServer;
+import com.velocitypowered.api.proxy.messages.ChannelIdentifier;
+import com.velocitypowered.api.proxy.messages.MinecraftChannelIdentifier;
 import com.zaxxer.hikari.HikariConfig;
 import com.zaxxer.hikari.HikariDataSource;
 import de.jvstvshd.velocitypunishment.api.VelocityPunishment;
@@ -39,6 +41,7 @@ import de.jvstvshd.velocitypunishment.api.message.MessageProvider;
 import de.jvstvshd.velocitypunishment.api.punishment.PunishmentManager;
 import de.jvstvshd.velocitypunishment.api.punishment.util.PlayerResolver;
 import de.jvstvshd.velocitypunishment.commands.*;
+import de.jvstvshd.velocitypunishment.common.plugin.MuteData;
 import de.jvstvshd.velocitypunishment.config.ConfigurationManager;
 import de.jvstvshd.velocitypunishment.impl.DefaultPlayerResolver;
 import de.jvstvshd.velocitypunishment.impl.DefaultPunishmentManager;
@@ -46,6 +49,7 @@ import de.jvstvshd.velocitypunishment.listener.ChatListener;
 import de.jvstvshd.velocitypunishment.listener.ConnectListener;
 import de.jvstvshd.velocitypunishment.message.ResourceBundleMessageProvider;
 import net.kyori.adventure.text.Component;
+import org.jetbrains.annotations.NotNull;
 import org.postgresql.ds.PGSimpleDataSource;
 import org.slf4j.Logger;
 
@@ -66,6 +70,7 @@ public class VelocityPunishmentPlugin implements VelocityPunishment {
     private final Logger logger;
     private final ConfigurationManager configurationManager;
     private final ExecutorService service = Executors.newCachedThreadPool();
+    public static final ChannelIdentifier MUTE_DATA_CHANNEL_IDENTIFIER = MinecraftChannelIdentifier.from(MuteData.MUTE_DATA_CHANNEL_IDENTIFIER);
     private PunishmentManager punishmentManager;
     private HikariDataSource dataSource;
     private PlayerResolver playerResolver;
@@ -75,6 +80,7 @@ public class VelocityPunishmentPlugin implements VelocityPunishment {
             Since 1.19.1, cancelling chat messages on proxy is not possible anymore. Therefore, we have to listen to the chat event on the actual game server. This means
             that there has to be a spigot/paper extension to this plugin which is not yet available unless there's a possibility. Therefore all mute related features won't work at the moment.
             If you use 1.19 or lower you will not be affected by this.The progress of the extension can be found here: https://github.com/JvstvsHD/velocity-punishment/issues/6""".replace("\n", " ");
+    private final MessagingChannelCommunicator communicator;
 
     /**
      * Since 1.19.1, cancelling chat messages on proxy is not possible anymore. Therefore, we have to listen to the chat event on the actual game server. This means
@@ -90,6 +96,7 @@ public class VelocityPunishmentPlugin implements VelocityPunishment {
         this.logger = logger;
         this.configurationManager = new ConfigurationManager(Paths.get(dataDirectory.toAbsolutePath().toString(), "config.json"));
         this.playerResolver = new DefaultPlayerResolver(server);
+        this.communicator = new MessagingChannelCommunicator(server, logger);
     }
 
     @Subscribe
@@ -116,6 +123,7 @@ public class VelocityPunishmentPlugin implements VelocityPunishment {
 
     private void setup(CommandManager commandManager, EventManager eventManager) {
         ChatListener chatListener = new ChatListener(this);
+        eventManager.register(this, communicator);
         eventManager.register(this, new ConnectListener(this, Executors.newCachedThreadPool(), server, chatListener));
         logger.info(MUTES_DISABLED_STRING);
         eventManager.register(this, chatListener);
@@ -195,6 +203,11 @@ public class VelocityPunishmentPlugin implements VelocityPunishment {
     @Override
     public MessageProvider getMessageProvider() {
         return messageProvider;
+    }
+
+    @NotNull
+    public MessagingChannelCommunicator communicator() {
+        return communicator;
     }
 
     @Override

@@ -12,20 +12,13 @@ repositories {
 }
 
 dependencies {
-    implementation(projects.api)
-    compileOnly(libs.velocity.api)
+    api(libs.bundles.database)
+    api(projects.pluginCommon)
     annotationProcessor(libs.velocity.api)
+    compileOnly(libs.velocity.api)
     compileOnly(libs.luckperms.api)
-    implementation(libs.jackson.databind)
-    implementation(libs.bundles.database)
     testImplementation(libs.junit.jupiter.api)
     testRuntimeOnly(libs.junit.jupiter.engine)
-}
-
-tasks {
-    compileJava {
-        options.encoding = "UTF-8"
-    }
 }
 
 tasks.getByName<Test>("test") {
@@ -34,6 +27,10 @@ tasks.getByName<Test>("test") {
 
 
 tasks {
+    compileJava {
+        options.encoding = "UTF-8"
+    }
+
     val copyServerJar = task<Copy>("copyServerJar") {
         from(shadowJar)
         into(
@@ -42,7 +39,7 @@ tasks {
         )
     }
     shadowJar {
-        archiveBaseName.set("velocity-punishment-${rootProject.version}")
+        archiveBaseName.set("velocity-punishment")
         finalizedBy(copyServerJar)
     }
     build {

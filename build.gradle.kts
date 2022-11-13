@@ -1,7 +1,6 @@
 import org.cadixdev.gradle.licenser.Licenser
 
 plugins {
-    java
     `maven-publish`
     signing
     id("org.cadixdev.licenser") version "0.6.1"
@@ -93,19 +92,8 @@ subprojects {
     }
 }
 
-tasks.getByName<Test>("test") {
-    useJUnitPlatform()
-}
-
 tasks.withType<JavaCompile>().configureEach {
     options.encoding = "UTF-8"
     sourceCompatibility = "17"
     targetCompatibility = "17"
-}
-
-tasks {
-    jar {
-        duplicatesStrategy = DuplicatesStrategy.INCLUDE
-        from(configurations.runtimeClasspath.get().map { if (it.isDirectory) it else zipTree(it) })
-    }
 }

@@ -24,6 +24,7 @@
 
 package de.jvstvshd.velocitypunishment.api.punishment;
 
+import de.jvstvshd.velocitypunishment.api.duration.PunishmentDuration;
 import de.jvstvshd.velocitypunishment.api.punishment.util.ReasonHolder;
 import net.kyori.adventure.text.Component;
 
@@ -85,6 +86,7 @@ public interface Punishment extends ReasonHolder {
 
     /**
      * Returns the type of this punishment. By default, this is a field from {@link StandardPunishmentType}.
+     *
      * @return the type of this punishment
      * @see StandardPunishmentType
      */
@@ -94,4 +96,10 @@ public interface Punishment extends ReasonHolder {
      * @return the id of this punishment.
      */
     UUID getPunishmentUuid();
+
+    /**
+     * @return the uuid of the punished player.
+     * @since 1.0.1
+     */
+    UUID getUuid();
 }

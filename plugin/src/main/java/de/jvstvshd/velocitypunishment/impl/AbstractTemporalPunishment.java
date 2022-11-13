@@ -24,12 +24,13 @@
 
 package de.jvstvshd.velocitypunishment.impl;
 
+import de.jvstvshd.velocitypunishment.api.duration.PunishmentDuration;
 import de.jvstvshd.velocitypunishment.api.message.MessageProvider;
+import de.jvstvshd.velocitypunishment.api.punishment.Mute;
 import de.jvstvshd.velocitypunishment.api.punishment.Punishment;
-import de.jvstvshd.velocitypunishment.api.punishment.PunishmentDuration;
-import de.jvstvshd.velocitypunishment.api.punishment.PunishmentManager;
 import de.jvstvshd.velocitypunishment.api.punishment.TemporalPunishment;
 import de.jvstvshd.velocitypunishment.api.punishment.util.PlayerResolver;
+import de.jvstvshd.velocitypunishment.common.plugin.MuteData;
 import de.jvstvshd.velocitypunishment.internal.Util;
 import net.kyori.adventure.text.Component;
 
@@ -45,12 +46,12 @@ public abstract class AbstractTemporalPunishment extends AbstractPunishment impl
 
     private final PunishmentDuration duration;
 
-    public AbstractTemporalPunishment(UUID playerUuid, Component reason, DataSource dataSource, PlayerResolver playerResolver, PunishmentManager punishmentManager, ExecutorService service, PunishmentDuration duration, MessageProvider messageProvider) {
+    public AbstractTemporalPunishment(UUID playerUuid, Component reason, DataSource dataSource, PlayerResolver playerResolver, DefaultPunishmentManager punishmentManager, ExecutorService service, PunishmentDuration duration, MessageProvider messageProvider) {
         super(playerUuid, reason, dataSource, playerResolver, punishmentManager, service, messageProvider);
         this.duration = duration;
     }
 
-    public AbstractTemporalPunishment(UUID playerUuid, Component reason, DataSource dataSource, ExecutorService service, PunishmentManager punishmentManager, UUID punishmentUuid, PlayerResolver playerResolver, PunishmentDuration duration, MessageProvider messageProvider) {
+    public AbstractTemporalPunishment(UUID playerUuid, Component reason, DataSource dataSource, ExecutorService service, DefaultPunishmentManager punishmentManager, UUID punishmentUuid, PlayerResolver playerResolver, PunishmentDuration duration, MessageProvider messageProvider) {
         super(playerUuid, reason, dataSource, service, punishmentManager, punishmentUuid, playerResolver, messageProvider);
         this.duration = duration;
     }
@@ -89,7 +90,19 @@ public abstract class AbstractTemporalPunishment extends AbstractPunishment impl
                 statement.setString(4, Util.trimUuid(getPunishmentUuid()));
                 statement.executeUpdate();
             }
-            return new DefaultMute(getPlayerUuid(), newReason, getDataSource(), getPlayerResolver(), getPunishmentManager(), getService(), newDuration, getMessageProvider());
+            if (getType().isBan()) {
+                return new DefaultBan(getPlayerUuid(), newReason, getDataSource(), getPlayerResolver(), getPunishmentManager(), getService(), newDuration, getMessageProvider());
+            } else if (getType().isMute()) {
+                var newMute = new DefaultMute(getPlayerUuid(), newReason, getDataSource(), getPlayerResolver(), getPunishmentManager(), getService(), newDuration, getMessageProvider());
+                newMute.queueMute(MuteData.UPDATE);
+                return newMute;
+            } else {
+                throw new IllegalStateException("punishment type is not a ban or mute");
+            }
         }, getService());
+    }
+
+    void queueMute(int type) throws Exception {
+        getPunishmentManager().plugin().communicator().queueMute((Mute) this, type);
     }
 }

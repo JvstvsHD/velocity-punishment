@@ -28,6 +28,7 @@ import com.google.common.collect.ImmutableList;
 import com.velocitypowered.api.proxy.ProxyServer;
 import com.zaxxer.hikari.HikariDataSource;
 import de.jvstvshd.velocitypunishment.VelocityPunishmentPlugin;
+import de.jvstvshd.velocitypunishment.api.duration.PunishmentDuration;
 import de.jvstvshd.velocitypunishment.api.punishment.*;
 import de.jvstvshd.velocitypunishment.internal.Util;
 import net.kyori.adventure.text.Component;
@@ -44,13 +45,13 @@ import static de.jvstvshd.velocitypunishment.internal.Util.executeAsync;
 
 public class DefaultPunishmentManager implements PunishmentManager {
 
+    protected static final String QUERY_PUNISHMENT_WITH_ID = "SELECT uuid, name, type, expiration, reason FROM velocity_punishment WHERE punishment_id = ?";
+    protected static final String SELECT_PUNISHMENT_WITH_TYPE = "SELECT expiration, reason, punishment_id FROM velocity_punishment WHERE uuid = ? AND type = ?";
+
     private final ProxyServer proxyServer;
     private final HikariDataSource dataSource;
     private final ExecutorService service = Executors.newCachedThreadPool();
     private final VelocityPunishmentPlugin plugin;
-
-    private static final String QUERY_PUNISHMENT_WITH_ID = "SELECT uuid, name, type, expiration, reason FROM velocity_punishment WHERE punishment_id = ?";
-    private static final String SELECT_PUNISHMENT_WITH_TYPE = "SELECT expiration, reason, punishment_id FROM velocity_punishment WHERE uuid = ? AND type = ?";
 
     public DefaultPunishmentManager(ProxyServer proxyServer, HikariDataSource dataSource, VelocityPunishmentPlugin plugin) {
         this.proxyServer = proxyServer;
@@ -96,9 +97,12 @@ public class DefaultPunishmentManager implements PunishmentManager {
                 final UUID punishmentUuid = Util.parseUuid(resultSet.getString(3));
                 Punishment punishment;
                 switch (type) {
-                    case BAN, PERMANENT_BAN -> punishment = new DefaultBan(uuid, reason, dataSource, service, this, punishmentUuid, plugin.getPlayerResolver(), duration, plugin.getMessageProvider());
-                    case MUTE, PERMANENT_MUTE -> punishment = new DefaultMute(uuid, reason, dataSource, service, this, punishmentUuid, plugin.getPlayerResolver(), duration, plugin.getMessageProvider());
-                    case KICK -> punishment = new DefaultKick(uuid, reason, dataSource, service, this, punishmentUuid, plugin.getPlayerResolver(), plugin.getMessageProvider());
+                    case BAN, PERMANENT_BAN ->
+                            punishment = new DefaultBan(uuid, reason, dataSource, service, this, punishmentUuid, plugin.getPlayerResolver(), duration, plugin.getMessageProvider());
+                    case MUTE, PERMANENT_MUTE ->
+                            punishment = new DefaultMute(uuid, reason, dataSource, service, this, punishmentUuid, plugin.getPlayerResolver(), duration, plugin.getMessageProvider());
+                    case KICK ->
+                            punishment = new DefaultKick(uuid, reason, dataSource, service, this, punishmentUuid, plugin.getPlayerResolver(), plugin.getMessageProvider());
                     default -> throw new UnsupportedOperationException("unhandled punishment type: " + type.getName());
                 }
                 punishments.add(punishment);
@@ -108,6 +112,17 @@ public class DefaultPunishmentManager implements PunishmentManager {
             e.printStackTrace();
         }
         return ImmutableList.of();
+    }
+
+    protected List<StandardPunishmentType> getTypes(PunishmentType... types) {
+        ArrayList<StandardPunishmentType> vTypes = new ArrayList<>();
+        for (PunishmentType punishmentType : types) {
+            if (punishmentType instanceof StandardPunishmentType vType)
+                vTypes.add(vType);
+            else
+                throw new IllegalArgumentException("Invalid punishment type: " + punishmentType + ", class: " + punishmentType.getClass());
+        }
+        return Collections.unmodifiableList(vTypes);
     }
 
     @SuppressWarnings("unchecked")
@@ -121,42 +136,21 @@ public class DefaultPunishmentManager implements PunishmentManager {
         }
         final Component reason = LegacyComponentSerializer.legacySection().deserialize(resultSet.getString(reasonIndex));
         return (T) switch (type) {
-            case BAN, PERMANENT_BAN -> new DefaultBan(uuid, reason, dataSource, service, this, punishmentUuid, plugin.getPlayerResolver(), duration, plugin.getMessageProvider());
-            case MUTE, PERMANENT_MUTE -> new DefaultMute(uuid, reason, dataSource, service, this, punishmentUuid, plugin.getPlayerResolver(), duration, plugin.getMessageProvider());
-            case KICK -> new DefaultKick(uuid, reason, dataSource, service, this, punishmentUuid, plugin.getPlayerResolver(), plugin.getMessageProvider());
+            case BAN, PERMANENT_BAN ->
+                    new DefaultBan(uuid, reason, dataSource, service, this, punishmentUuid, plugin.getPlayerResolver(), duration, plugin.getMessageProvider());
+            case MUTE, PERMANENT_MUTE ->
+                    new DefaultMute(uuid, reason, dataSource, service, this, punishmentUuid, plugin.getPlayerResolver(), duration, plugin.getMessageProvider());
+            case KICK ->
+                    new DefaultKick(uuid, reason, dataSource, service, this, punishmentUuid, plugin.getPlayerResolver(), plugin.getMessageProvider());
         };
-    }
-
-    @SuppressWarnings("SameParameterValue")
-    private <T extends Punishment> T getPunishment(ResultSet resultSet, UUID punishmentId, int uuidIndex, int timestampIndex, int reasonIndex,
-                                                   int typeIndex) throws SQLException {
-        return getPunishment(resultSet, StandardPunishmentType.valueOf(resultSet.getString(typeIndex).toUpperCase(Locale.ROOT)),
-                punishmentId, uuidIndex, timestampIndex, reasonIndex);
-    }
-
-
-    private List<StandardPunishmentType> getTypes(PunishmentType... types) {
-        ArrayList<StandardPunishmentType> vTypes = new ArrayList<>();
-        for (PunishmentType punishmentType : types) {
-            if (punishmentType instanceof StandardPunishmentType vType)
-                vTypes.add(vType);
-            else
-                throw new IllegalArgumentException("Invalid punishment type: " + punishmentType + ", class: " + punishmentType.getClass());
-        }
-        return ImmutableList.copyOf(vTypes);
-    }
-
-    @Override
-    public ProxyServer getServer() {
-        return proxyServer;
     }
 
     @Override
     public <T extends Punishment> CompletableFuture<Optional<T>> getPunishment(UUID punishmentId, Executor service) {
-        return executeAsync(() -> {
+        return de.jvstvshd.velocitypunishment.common.plugin.Util.executeAsync(() -> {
             try (Connection connection = dataSource.getConnection();
                  PreparedStatement statement = connection.prepareStatement(QUERY_PUNISHMENT_WITH_ID)) {
-                statement.setString(1, Util.trimUuid(punishmentId));
+                statement.setString(1, de.jvstvshd.velocitypunishment.common.plugin.Util.trimUuid(punishmentId));
                 ResultSet rs = statement.executeQuery();
                 if (rs.next()) {
                     return Optional.of(getPunishment(rs, punishmentId, 1, 4, 5, 3));
@@ -165,6 +159,22 @@ public class DefaultPunishmentManager implements PunishmentManager {
                 }
             }
         }, service);
+    }
+
+    @SuppressWarnings("SameParameterValue")
+    protected <T extends Punishment> T getPunishment(ResultSet resultSet, UUID punishmentId, int uuidIndex, int timestampIndex, int reasonIndex,
+                                                     int typeIndex) throws SQLException {
+        return getPunishment(resultSet, StandardPunishmentType.valueOf(resultSet.getString(typeIndex).toUpperCase(Locale.ROOT)),
+                punishmentId, uuidIndex, timestampIndex, reasonIndex);
+    }
+
+    @Override
+    public ProxyServer getServer() {
+        return proxyServer;
+    }
+
+    public VelocityPunishmentPlugin plugin() {
+        return plugin;
     }
 
     @Override

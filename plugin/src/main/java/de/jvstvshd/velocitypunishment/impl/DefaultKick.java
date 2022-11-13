@@ -27,7 +27,10 @@ package de.jvstvshd.velocitypunishment.impl;
 import com.velocitypowered.api.command.CommandSource;
 import com.velocitypowered.api.proxy.Player;
 import de.jvstvshd.velocitypunishment.api.message.MessageProvider;
-import de.jvstvshd.velocitypunishment.api.punishment.*;
+import de.jvstvshd.velocitypunishment.api.punishment.Kick;
+import de.jvstvshd.velocitypunishment.api.punishment.Punishment;
+import de.jvstvshd.velocitypunishment.api.punishment.PunishmentType;
+import de.jvstvshd.velocitypunishment.api.punishment.StandardPunishmentType;
 import de.jvstvshd.velocitypunishment.api.punishment.util.PlayerResolver;
 import net.kyori.adventure.text.Component;
 
@@ -39,7 +42,7 @@ import java.util.concurrent.ExecutorService;
 
 public class DefaultKick extends AbstractPunishment implements Kick {
 
-    public DefaultKick(UUID playerUuid, Component reason, DataSource dataSource, ExecutorService service, PunishmentManager punishmentManager, UUID punishmentUuid, PlayerResolver playerResolver, MessageProvider messageProvider) {
+    public DefaultKick(UUID playerUuid, Component reason, DataSource dataSource, ExecutorService service, DefaultPunishmentManager punishmentManager, UUID punishmentUuid, PlayerResolver playerResolver, MessageProvider messageProvider) {
         super(playerUuid, reason, dataSource, service, punishmentManager, punishmentUuid, playerResolver, messageProvider);
     }
 

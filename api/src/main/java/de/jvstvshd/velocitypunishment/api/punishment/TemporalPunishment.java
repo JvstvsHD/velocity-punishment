@@ -24,6 +24,8 @@
 
 package de.jvstvshd.velocitypunishment.api.punishment;
 
+import de.jvstvshd.velocitypunishment.api.duration.PunishmentDuration;
+
 /**
  * An interface containing some methods to only punish a player for a defined duration.
  *

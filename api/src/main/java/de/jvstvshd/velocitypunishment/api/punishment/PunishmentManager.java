@@ -26,6 +26,7 @@ package de.jvstvshd.velocitypunishment.api.punishment;
 
 import com.velocitypowered.api.proxy.Player;
 import com.velocitypowered.api.proxy.ProxyServer;
+import de.jvstvshd.velocitypunishment.api.duration.PunishmentDuration;
 import de.jvstvshd.velocitypunishment.api.punishment.util.PlayerResolver;
 import net.kyori.adventure.text.Component;
 

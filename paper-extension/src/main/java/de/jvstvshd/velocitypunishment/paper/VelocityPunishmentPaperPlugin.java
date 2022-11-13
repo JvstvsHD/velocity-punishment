@@ -22,29 +22,34 @@
  * SOFTWARE.
  */
 
-package de.jvstvshd.velocitypunishment.api.punishment;
+package de.jvstvshd.velocitypunishment.paper;
 
-public interface PunishmentType {
+import de.jvstvshd.velocitypunishment.common.plugin.MuteData;
+import de.jvstvshd.velocitypunishment.paper.listeners.ChatListener;
+import de.jvstvshd.velocitypunishment.paper.listeners.MessagingChannelListener;
+import de.jvstvshd.velocitypunishment.paper.listeners.MuteInformation;
+import org.bukkit.plugin.java.JavaPlugin;
 
-    String getName();
+import java.util.ArrayList;
+import java.util.List;
 
-    /**
-     * Determines whether the punishment is a mute or not.
-     *
-     * @return true if the punishment is a mute, false otherwise.
-     * @since 1.0.1
-     */
-    default boolean isMute() {
-        return this == StandardPunishmentType.MUTE || this == StandardPunishmentType.PERMANENT_MUTE;
+public class VelocityPunishmentPaperPlugin extends JavaPlugin {
+
+    private final List<MuteInformation> cachedMutes = new ArrayList<>();
+
+    @Override
+    public void onEnable() {
+        getLogger().info("VelocityPunishmentPaperPlugin has been enabled!");
+        getServer().getMessenger().registerIncomingPluginChannel(this, MuteData.MUTE_DATA_CHANNEL_IDENTIFIER, new MessagingChannelListener(this));
+        getServer().getPluginManager().registerEvents(new ChatListener(this), this);
     }
 
-    /**
-     * Determines whether the punishment is a ban or not.
-     *
-     * @return true if the punishment is a ban, false otherwise.
-     * @since 1.0.1
-     */
-    default boolean isBan() {
-        return this == StandardPunishmentType.BAN || this == StandardPunishmentType.PERMANENT_BAN;
+    @Override
+    public void onDisable() {
+        getLogger().info("VelocityPunishmentPaperPlugin has been disabled!");
+    }
+
+    public List<MuteInformation> cachedMutes() {
+        return cachedMutes;
     }
 }

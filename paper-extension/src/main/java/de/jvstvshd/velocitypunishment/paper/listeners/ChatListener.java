@@ -22,29 +22,31 @@
  * SOFTWARE.
  */
 
-package de.jvstvshd.velocitypunishment.api.punishment;
+package de.jvstvshd.velocitypunishment.paper.listeners;
 
-public interface PunishmentType {
+import de.jvstvshd.velocitypunishment.paper.VelocityPunishmentPaperPlugin;
+import io.papermc.paper.event.player.AsyncChatEvent;
+import org.bukkit.event.EventHandler;
+import org.bukkit.event.Listener;
 
-    String getName();
+import java.util.Comparator;
+import java.util.stream.Collectors;
 
-    /**
-     * Determines whether the punishment is a mute or not.
-     *
-     * @return true if the punishment is a mute, false otherwise.
-     * @since 1.0.1
-     */
-    default boolean isMute() {
-        return this == StandardPunishmentType.MUTE || this == StandardPunishmentType.PERMANENT_MUTE;
+public class ChatListener implements Listener {
+
+    private final VelocityPunishmentPaperPlugin plugin;
+
+    public ChatListener(VelocityPunishmentPaperPlugin plugin) {
+        this.plugin = plugin;
     }
 
-    /**
-     * Determines whether the punishment is a ban or not.
-     *
-     * @return true if the punishment is a ban, false otherwise.
-     * @since 1.0.1
-     */
-    default boolean isBan() {
-        return this == StandardPunishmentType.BAN || this == StandardPunishmentType.PERMANENT_BAN;
+    @EventHandler
+    public void onChat(AsyncChatEvent event) {
+        var mutes = plugin.cachedMutes().stream().filter(muteData -> event.getPlayer().getUniqueId().equals(muteData.getPlayer().getUniqueId())).collect(Collectors.toList());
+        if (mutes.isEmpty()) return;
+        mutes.sort(Comparator.comparing(MuteInformation::getDuration));
+        var mute = mutes.get(0);
+        event.setCancelled(true);
+        event.getPlayer().sendMessage(mute.getReason());
     }
 }

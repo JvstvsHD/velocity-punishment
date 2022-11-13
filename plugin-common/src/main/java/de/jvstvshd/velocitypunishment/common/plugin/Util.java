@@ -22,29 +22,31 @@
  * SOFTWARE.
  */
 
-package de.jvstvshd.velocitypunishment.api.punishment;
+package de.jvstvshd.velocitypunishment.common.plugin;
 
-public interface PunishmentType {
+import java.util.UUID;
+import java.util.concurrent.Callable;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.Executor;
 
-    String getName();
+public class Util {
 
-    /**
-     * Determines whether the punishment is a mute or not.
-     *
-     * @return true if the punishment is a mute, false otherwise.
-     * @since 1.0.1
-     */
-    default boolean isMute() {
-        return this == StandardPunishmentType.MUTE || this == StandardPunishmentType.PERMANENT_MUTE;
+    private Util() {
     }
 
-    /**
-     * Determines whether the punishment is a ban or not.
-     *
-     * @return true if the punishment is a ban, false otherwise.
-     * @since 1.0.1
-     */
-    default boolean isBan() {
-        return this == StandardPunishmentType.BAN || this == StandardPunishmentType.PERMANENT_BAN;
+    public static <T> CompletableFuture<T> executeAsync(Callable<T> task, Executor service) {
+        CompletableFuture<T> cf = new CompletableFuture<>();
+        service.execute(() -> {
+            try {
+                cf.complete(task.call());
+            } catch (Exception e) {
+                cf.completeExceptionally(e);
+            }
+        });
+        return cf;
+    }
+
+    public static String trimUuid(UUID origin) {
+        return origin.toString().toLowerCase().replace("-", "");
     }
 }
