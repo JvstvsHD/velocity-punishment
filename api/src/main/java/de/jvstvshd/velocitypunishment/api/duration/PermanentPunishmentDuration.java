@@ -22,37 +22,62 @@
  * SOFTWARE.
  */
 
-package de.jvstvshd.velocitypunishment.api.punishment;
+package de.jvstvshd.velocitypunishment.api.duration;
 
-import de.jvstvshd.velocitypunishment.api.duration.PunishmentDuration;
-import net.kyori.adventure.text.Component;
+import org.jetbrains.annotations.NotNull;
 
-import java.util.concurrent.CompletableFuture;
+import java.time.LocalDateTime;
 
 /**
- * Super interface for all kick implementation.<br>
- * Unsupported operations:
- * <ul>
- *     <li>{@link #cancel()}</li>
- *     <li>{@link #change(PunishmentDuration, Component)}</li>
- * </ul>
+ * A permanent punishment duration (whose expiration date is {@link #MAX}.
  *
- * @see com.velocitypowered.api.proxy.Player#disconnect(Component)
+ * @since 1.0.1
  */
-public interface Kick extends Punishment {
+public class PermanentPunishmentDuration extends AbsolutePunishmentDuration implements PunishmentDuration {
 
-    @Override
-    default boolean isOngoing() {
-        return false;
+    public static final PermanentPunishmentDuration PERMANENT = new PermanentPunishmentDuration();
+
+    private PermanentPunishmentDuration() {
+        super(MAX);
     }
 
     @Override
-    default CompletableFuture<Punishment> cancel() {
-        throw new UnsupportedOperationException("Cannot annul kick since a kick lasts only one moment");
+    public boolean isPermanent() {
+        return true;
     }
 
     @Override
-    default CompletableFuture<Punishment> change(PunishmentDuration newDuration, Component newReason) {
-        throw new UnsupportedOperationException("Cannot change a kick lasts only one moment");
+    public LocalDateTime expiration() {
+        return MAX;
+    }
+
+    @Override
+    public String expirationAsString() {
+        return "Permanent";
+    }
+
+    @Override
+    public String remainingDuration() {
+        return "Permanent";
+    }
+
+    @Override
+    public int compareTo(@NotNull PunishmentDuration other) {
+        return other.isPermanent() ? 0 : -1;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        return o instanceof PunishmentDuration pd && pd.isPermanent();
+    }
+
+    @Override
+    public int hashCode() {
+        return MAX.hashCode();
+    }
+
+    @Override
+    public String toString() {
+        return "PermanentPunishmentDuration{} " + super.toString();
     }
 }

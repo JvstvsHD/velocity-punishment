@@ -24,6 +24,7 @@
 
 package de.jvstvshd.velocitypunishment.api.punishment;
 
+import de.jvstvshd.velocitypunishment.api.duration.PunishmentDuration;
 import de.jvstvshd.velocitypunishment.api.punishment.util.ReasonHolder;
 import net.kyori.adventure.text.Component;
 
