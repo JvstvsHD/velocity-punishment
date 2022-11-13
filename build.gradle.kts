@@ -1,4 +1,5 @@
 import org.cadixdev.gradle.licenser.Licenser
+import java.util.*
 
 plugins {
     java
@@ -32,6 +33,11 @@ subprojects {
         gradle.projectsEvaluated {
 
             signing {
+                val signingKey = findProperty("signingKey")?.toString()
+                val signingPassword = findProperty("signingPassword")?.toString()
+                if (signingKey != null && signingPassword != null) {
+                    useInMemoryPgpKeys(String(Base64.getDecoder().decode(signingKey)), signingPassword)
+                }
                 sign(publishing.publications)
             }
 
