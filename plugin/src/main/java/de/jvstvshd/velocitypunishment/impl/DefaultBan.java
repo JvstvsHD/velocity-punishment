@@ -26,8 +26,11 @@ package de.jvstvshd.velocitypunishment.impl;
 
 import com.velocitypowered.api.command.CommandSource;
 import com.velocitypowered.api.proxy.Player;
+import de.jvstvshd.velocitypunishment.api.duration.PunishmentDuration;
 import de.jvstvshd.velocitypunishment.api.message.MessageProvider;
-import de.jvstvshd.velocitypunishment.api.punishment.*;
+import de.jvstvshd.velocitypunishment.api.punishment.Ban;
+import de.jvstvshd.velocitypunishment.api.punishment.Punishment;
+import de.jvstvshd.velocitypunishment.api.punishment.StandardPunishmentType;
 import de.jvstvshd.velocitypunishment.api.punishment.util.PlayerResolver;
 import de.jvstvshd.velocitypunishment.internal.Util;
 import net.kyori.adventure.text.Component;
@@ -48,11 +51,11 @@ import java.util.concurrent.TimeUnit;
 
 public class DefaultBan extends AbstractTemporalPunishment implements Ban {
 
-    public DefaultBan(UUID playerUuid, Component reason, DataSource dataSource, PlayerResolver playerResolver, PunishmentManager punishmentManager, ExecutorService service, PunishmentDuration duration, MessageProvider messageProvider) {
+    public DefaultBan(UUID playerUuid, Component reason, DataSource dataSource, PlayerResolver playerResolver, DefaultPunishmentManager punishmentManager, ExecutorService service, PunishmentDuration duration, MessageProvider messageProvider) {
         super(playerUuid, reason, dataSource, playerResolver, punishmentManager, service, duration, messageProvider);
     }
 
-    public DefaultBan(UUID playerUuid, Component reason, DataSource dataSource, ExecutorService service, PunishmentManager punishmentManager, UUID punishmentUuid, PlayerResolver playerResolver, PunishmentDuration duration, MessageProvider messageProvider) {
+    public DefaultBan(UUID playerUuid, Component reason, DataSource dataSource, ExecutorService service, DefaultPunishmentManager punishmentManager, UUID punishmentUuid, PlayerResolver playerResolver, PunishmentDuration duration, MessageProvider messageProvider) {
         super(playerUuid, reason, dataSource, service, punishmentManager, punishmentUuid, playerResolver, duration, messageProvider);
     }
 
@@ -72,7 +75,7 @@ public class DefaultBan extends AbstractTemporalPunishment implements Ban {
                 statement.setString(2, getPlayerResolver().getOrQueryPlayerName(getPlayerUuid(),
                         Executors.newSingleThreadExecutor()).get(5, TimeUnit.SECONDS).toLowerCase());
                 statement.setString(3, getType().name());
-                statement.setTimestamp(4, getDuration().timestampExpiration());
+                statement.setTimestamp(4, getDuration().expirationAsTimestamp());
                 statement.setString(5, convertReason(getReason()));
                 statement.setString(6, Util.trimUuid(getPunishmentUuid()));
                 statement.executeUpdate();
@@ -115,7 +118,7 @@ public class DefaultBan extends AbstractTemporalPunishment implements Ban {
         } else {
             var until = Component.text(getDuration().expiration().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")))
                     .color(NamedTextColor.YELLOW);
-            return getMessageProvider().provide("punishment.ban.temp.full-reason", source, true, Component.text(getDuration().getRemainingDuration()).color(NamedTextColor.YELLOW), getReason(), until);
+            return getMessageProvider().provide("punishment.ban.temp.full-reason", source, true, Component.text(getDuration().remainingDuration()).color(NamedTextColor.YELLOW), getReason(), until);
         }
     }
 

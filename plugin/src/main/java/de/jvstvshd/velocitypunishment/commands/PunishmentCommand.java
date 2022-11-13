@@ -96,7 +96,7 @@ public class PunishmentCommand {
 
     private static int execute(CommandContext<CommandSource> context, VelocityPunishmentPlugin plugin) {
         var source = context.getSource();
-        var uuidString = context.getArgument("Punishment UUID", String.class);
+        var uuidString = context.getArgument("punishment ID", String.class);
         UUID uuid;
         try {
             uuid = Util.parseUuid(uuidString);

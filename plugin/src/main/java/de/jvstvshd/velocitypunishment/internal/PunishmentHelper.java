@@ -29,9 +29,9 @@ import com.mojang.brigadier.context.CommandContext;
 import com.velocitypowered.api.command.CommandSource;
 import com.velocitypowered.api.command.SimpleCommand;
 import de.jvstvshd.velocitypunishment.VelocityPunishmentPlugin;
+import de.jvstvshd.velocitypunishment.api.duration.PunishmentDuration;
 import de.jvstvshd.velocitypunishment.api.message.MessageProvider;
 import de.jvstvshd.velocitypunishment.api.punishment.Punishment;
-import de.jvstvshd.velocitypunishment.api.punishment.PunishmentDuration;
 import de.jvstvshd.velocitypunishment.api.punishment.TemporalPunishment;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.TextComponent;
@@ -71,10 +71,10 @@ public class PunishmentHelper {
     public static Component buildPunishmentDataTemporal(TemporalPunishment punishment, MessageProvider provider, CommandSource source) {
         return punishment.isPermanent() ? Component.text("permanent").color(NamedTextColor.RED) : Component.text()
                 .append(provider.provide("helper.temporal.duration", source, true).color(NamedTextColor.AQUA),
-                        Component.text(punishment.getDuration().getRemainingDuration()).color(NamedTextColor.YELLOW),
+                        Component.text(punishment.getDuration().remainingDuration()).color(NamedTextColor.YELLOW),
                         Component.newline(),
                         provider.provide("helper.temporal.end", source, true).color(NamedTextColor.AQUA),
-                        Component.text(punishment.getDuration().getEnd()).color(NamedTextColor.YELLOW))
+                        Component.text(punishment.getDuration().expirationAsString()).color(NamedTextColor.YELLOW))
                 /*Component.newline(),
                 Component.text("initial duration: ").color(NamedTextColor.AQUA),
                 Component.text(punishment.getDuration().getInitialDuration()).color(NamedTextColor.YELLOW))*/
@@ -95,7 +95,6 @@ public class PunishmentHelper {
         }
     }
 
-    @Deprecated(forRemoval = true)
     public static Optional<PunishmentDuration> parseDuration(CommandContext<CommandSource> context, MessageProvider provider) {
         if (!context.getArguments().containsKey("duration"))
             return Optional.empty();

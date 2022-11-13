@@ -33,21 +33,33 @@ import de.jvstvshd.velocitypunishment.api.punishment.Ban;
 import de.jvstvshd.velocitypunishment.api.punishment.Mute;
 import de.jvstvshd.velocitypunishment.api.punishment.Punishment;
 import de.jvstvshd.velocitypunishment.api.punishment.StandardPunishmentType;
+import de.jvstvshd.velocitypunishment.common.plugin.MuteData;
 import de.jvstvshd.velocitypunishment.internal.Util;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
 
-import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.TimeUnit;
 
-public record ConnectListener(VelocityPunishmentPlugin plugin,
-                              ExecutorService service, ProxyServer proxyServer, ChatListener chatListener) {
+public final class ConnectListener {
+    private final VelocityPunishmentPlugin plugin;
+    private final ExecutorService service;
+    private final ProxyServer proxyServer;
+    private final ChatListener chatListener;
+
+    public ConnectListener(VelocityPunishmentPlugin plugin,
+                           ExecutorService service, ProxyServer proxyServer, ChatListener chatListener) {
+        this.plugin = plugin;
+        this.service = service;
+        this.proxyServer = proxyServer;
+        this.chatListener = chatListener;
+    }
 
     @Subscribe
-    public void onConnect(LoginEvent event) throws SQLException {
+    public void onConnect(LoginEvent event) throws Exception {
         if (plugin.whitelistActive()) {
             plugin.getLogger().info("Whitelist is activated.");
             try (var connection = plugin.getDataSource().getConnection();
@@ -76,13 +88,21 @@ public record ConnectListener(VelocityPunishmentPlugin plugin,
             if (punishment instanceof Mute mute)
                 mutes.add(mute);
         }
+        for (Mute mute : mutes) {
+            try {
+                plugin.communicator().queueMute(mute, event.getPlayer(), MuteData.ADD);
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        }
         Mute longestMute = Util.getLongestPunishment(mutes);
         if (longestMute != null) {
             longestMute.getDuration().absolute();
             chatListener.getMutes().put(event.getPlayer().getUniqueId(), new ChatListener.MuteContainer(true).setMute(longestMute));
         }
-        if (bans.isEmpty())
+        if (bans.isEmpty()) {
             return;
+        }
         final Ban ban = Util.getLongestPunishment(bans);
         if (ban == null)
             return;
@@ -103,4 +123,38 @@ public record ConnectListener(VelocityPunishmentPlugin plugin,
             }, service);
         }
     }
+
+    public VelocityPunishmentPlugin plugin() {
+        return plugin;
+    }
+
+    public ExecutorService service() {
+        return service;
+    }
+
+    @Override
+    public boolean equals(Object obj) {
+        if (obj == this) return true;
+        if (obj == null || obj.getClass() != this.getClass()) return false;
+        var that = (ConnectListener) obj;
+        return Objects.equals(this.plugin, that.plugin) &&
+                Objects.equals(this.service, that.service) &&
+                Objects.equals(this.proxyServer, that.proxyServer) &&
+                Objects.equals(this.chatListener, that.chatListener);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(plugin, service, proxyServer, chatListener);
+    }
+
+    @Override
+    public String toString() {
+        return "ConnectListener[" +
+                "plugin=" + plugin + ", " +
+                "service=" + service + ", " +
+                "proxyServer=" + proxyServer + ", " +
+                "chatListener=" + chatListener + ']';
+    }
+
 }
