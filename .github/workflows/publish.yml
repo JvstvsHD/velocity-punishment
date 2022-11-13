@@ -13,7 +13,7 @@ on:
     types: [created]
   push:
     branches:
-      - **
+      - '**'
 jobs:
   publish:
     runs-on: ubuntu-latest
