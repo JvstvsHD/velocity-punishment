@@ -2,7 +2,7 @@ plugins {
     java
 }
 
-version = "1.0.0"
+version = "1.0.1"
 description = "An convenient API to handle various punishments on Velocity."
 
 repositories {

@@ -86,6 +86,7 @@ public interface Punishment extends ReasonHolder {
 
     /**
      * Returns the type of this punishment. By default, this is a field from {@link StandardPunishmentType}.
+     *
      * @return the type of this punishment
      * @see StandardPunishmentType
      */
@@ -95,4 +96,10 @@ public interface Punishment extends ReasonHolder {
      * @return the id of this punishment.
      */
     UUID getPunishmentUuid();
+
+    /**
+     * @return the uuid of the punished player.
+     * @since 1.0.1
+     */
+    UUID getUuid();
 }

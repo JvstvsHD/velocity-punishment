@@ -27,4 +27,24 @@ package de.jvstvshd.velocitypunishment.api.punishment;
 public interface PunishmentType {
 
     String getName();
+
+    /**
+     * Determines whether the punishment is a mute or not.
+     *
+     * @return true if the punishment is a mute, false otherwise.
+     * @since 1.0.1
+     */
+    default boolean isMute() {
+        return this == StandardPunishmentType.MUTE || this == StandardPunishmentType.PERMANENT_MUTE;
+    }
+
+    /**
+     * Determines whether the punishment is a ban or not.
+     *
+     * @return true if the punishment is a ban, false otherwise.
+     * @since 1.0.1
+     */
+    default boolean isBan() {
+        return this == StandardPunishmentType.BAN || this == StandardPunishmentType.PERMANENT_BAN;
+    }
 }
