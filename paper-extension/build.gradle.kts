@@ -30,6 +30,9 @@ tasks {
         archiveBaseName.set("velocity-punishment-paper-extension")
         finalizedBy(copyServerJar)
     }
+    build {
+        dependsOn(shadowJar)
+    }
 }
 
 tasks.getByName<Test>("test") {

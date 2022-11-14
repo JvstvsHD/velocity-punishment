@@ -45,7 +45,6 @@ import de.jvstvshd.velocitypunishment.common.plugin.MuteData;
 import de.jvstvshd.velocitypunishment.config.ConfigurationManager;
 import de.jvstvshd.velocitypunishment.impl.DefaultPlayerResolver;
 import de.jvstvshd.velocitypunishment.impl.DefaultPunishmentManager;
-import de.jvstvshd.velocitypunishment.listener.ChatListener;
 import de.jvstvshd.velocitypunishment.listener.ConnectListener;
 import de.jvstvshd.velocitypunishment.message.ResourceBundleMessageProvider;
 import net.kyori.adventure.text.Component;
@@ -122,11 +121,9 @@ public class VelocityPunishmentPlugin implements VelocityPunishment {
     }
 
     private void setup(CommandManager commandManager, EventManager eventManager) {
-        ChatListener chatListener = new ChatListener(this);
         eventManager.register(this, communicator);
-        eventManager.register(this, new ConnectListener(this, Executors.newCachedThreadPool(), server, chatListener));
+        eventManager.register(this, new ConnectListener(this, Executors.newCachedThreadPool(), server));
         logger.info(MUTES_DISABLED_STRING);
-        eventManager.register(this, chatListener);
 
         commandManager.register(BanCommand.banCommand(this));
 
@@ -134,8 +131,8 @@ public class VelocityPunishmentPlugin implements VelocityPunishment {
         commandManager.register(PunishmentRemovalCommand.unbanCommand(this));
         commandManager.register(PunishmentRemovalCommand.unmuteCommand(this));
         commandManager.register(PunishmentCommand.punishmentCommand(this));
-        commandManager.register(MuteCommand.muteCommand(this, chatListener));
-        commandManager.register(commandManager.metaBuilder("tempmute").build(), new TempmuteCommand(this, chatListener));
+        commandManager.register(MuteCommand.muteCommand(this));
+        commandManager.register(TempmuteCommand.tempmuteCommand(this));
         commandManager.register(KickCommand.kickCommand(this));
         commandManager.register(WhitelistCommand.whitelistCommand(this));
     }

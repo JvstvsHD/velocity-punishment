@@ -48,14 +48,12 @@ public final class ConnectListener {
     private final VelocityPunishmentPlugin plugin;
     private final ExecutorService service;
     private final ProxyServer proxyServer;
-    private final ChatListener chatListener;
 
     public ConnectListener(VelocityPunishmentPlugin plugin,
-                           ExecutorService service, ProxyServer proxyServer, ChatListener chatListener) {
+                           ExecutorService service, ProxyServer proxyServer) {
         this.plugin = plugin;
         this.service = service;
         this.proxyServer = proxyServer;
-        this.chatListener = chatListener;
     }
 
     @Subscribe
@@ -94,11 +92,6 @@ public final class ConnectListener {
             } catch (Exception e) {
                 e.printStackTrace();
             }
-        }
-        Mute longestMute = Util.getLongestPunishment(mutes);
-        if (longestMute != null) {
-            longestMute.getDuration().absolute();
-            chatListener.getMutes().put(event.getPlayer().getUniqueId(), new ChatListener.MuteContainer(true).setMute(longestMute));
         }
         if (bans.isEmpty()) {
             return;
@@ -139,13 +132,12 @@ public final class ConnectListener {
         var that = (ConnectListener) obj;
         return Objects.equals(this.plugin, that.plugin) &&
                 Objects.equals(this.service, that.service) &&
-                Objects.equals(this.proxyServer, that.proxyServer) &&
-                Objects.equals(this.chatListener, that.chatListener);
+                Objects.equals(this.proxyServer, that.proxyServer);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(plugin, service, proxyServer, chatListener);
+        return Objects.hash(plugin, service, proxyServer);
     }
 
     @Override
@@ -153,8 +145,7 @@ public final class ConnectListener {
         return "ConnectListener[" +
                 "plugin=" + plugin + ", " +
                 "service=" + service + ", " +
-                "proxyServer=" + proxyServer + ", " +
-                "chatListener=" + chatListener + ']';
+                "proxyServer=" + proxyServer + ']';
     }
 
 }

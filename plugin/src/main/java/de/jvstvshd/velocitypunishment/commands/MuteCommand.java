@@ -31,30 +31,25 @@ import com.velocitypowered.api.command.CommandSource;
 import de.jvstvshd.velocitypunishment.VelocityPunishmentPlugin;
 import de.jvstvshd.velocitypunishment.internal.PunishmentHelper;
 import de.jvstvshd.velocitypunishment.internal.Util;
-import de.jvstvshd.velocitypunishment.listener.ChatListener;
 import net.kyori.adventure.text.TextComponent;
 import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.format.TextDecoration;
-
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.TimeoutException;
 
 import static de.jvstvshd.velocitypunishment.internal.Util.copyComponent;
 
 /**
  * @see VelocityPunishmentPlugin#MUTES_DISABLED
  */
-@Deprecated(forRemoval = true)
 public class MuteCommand {
 
-    public static BrigadierCommand muteCommand(VelocityPunishmentPlugin plugin, ChatListener chatListener) {
+    public static BrigadierCommand muteCommand(VelocityPunishmentPlugin plugin) {
         var node = Util.permissibleCommand("mute", "velocitypunishment.command.mute")
-                .then(Util.playerArgument(plugin.getServer()).executes(context -> execute(context, plugin, chatListener))
-                        .then(Util.reasonArgument.executes(context -> execute(context, plugin, chatListener))));
+                .then(Util.playerArgument(plugin.getServer()).executes(context -> execute(context, plugin))
+                        .then(Util.reasonArgument.executes(context -> execute(context, plugin))));
         return new BrigadierCommand(node);
     }
 
-    private static int execute(CommandContext<CommandSource> context, VelocityPunishmentPlugin plugin, ChatListener chatListener) {
+    private static int execute(CommandContext<CommandSource> context, VelocityPunishmentPlugin plugin) {
         CommandSource source = context.getSource();
         source.sendMessage(VelocityPunishmentPlugin.MUTES_DISABLED);
         var player = context.getArgument("player", String.class);
@@ -73,13 +68,6 @@ public class MuteCommand {
                             copyComponent(uuidString, plugin.getMessageProvider(), source).color(NamedTextColor.YELLOW).decorate(TextDecoration.BOLD),
                             reason).color(NamedTextColor.GREEN));
                     source.sendMessage(plugin.getMessageProvider().provide("commands.general.punishment.id", source, true, copyComponent(mute.getPunishmentUuid().toString().toLowerCase(), plugin.getMessageProvider(), source).color(NamedTextColor.YELLOW)));
-                }
-                if (plugin.getServer().getPlayer(uuid).isPresent()) {
-                    try {
-                        chatListener.update(uuid);
-                    } catch (ExecutionException | TimeoutException | InterruptedException e) {
-                        e.printStackTrace();
-                    }
                 }
             });
         }, plugin.getService());
