@@ -35,6 +35,9 @@ import java.time.LocalDateTime;
  */
 public class PermanentPunishmentDuration extends AbsolutePunishmentDuration implements PunishmentDuration {
 
+    /**
+     * A constant for a permanent punishment duration.
+     */
     public static final PermanentPunishmentDuration PERMANENT = new PermanentPunishmentDuration();
 
     private PermanentPunishmentDuration() {
@@ -61,6 +64,11 @@ public class PermanentPunishmentDuration extends AbsolutePunishmentDuration impl
         return "Permanent";
     }
 
+    /**
+     * @param other the object to be compared.
+     * @return either 0 if the other object is also a permanent punishment duration or -1 if not.
+     */
+    @SuppressWarnings("ComparatorMethodParameterNotUsed")
     @Override
     public int compareTo(@NotNull PunishmentDuration other) {
         return other.isPermanent() ? 0 : -1;

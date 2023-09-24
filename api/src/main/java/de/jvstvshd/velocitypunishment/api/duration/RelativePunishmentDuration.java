@@ -63,7 +63,7 @@ public class RelativePunishmentDuration implements PunishmentDuration {
 
     @Override
     public boolean isPermanent() {
-        return PermanentPunishmentDuration.PERMANENT.compareTo(this) == 0;
+        return !expiration().isBefore(LocalDateTime.MAX);
     }
 
     @Override
@@ -78,7 +78,7 @@ public class RelativePunishmentDuration implements PunishmentDuration {
 
     @Override
     public LocalDateTime expiration() {
-        return absolute().expiration();
+        return LocalDateTime.now().plus(duration);
     }
 
     @Override

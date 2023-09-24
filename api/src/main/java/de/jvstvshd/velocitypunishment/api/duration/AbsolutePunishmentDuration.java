@@ -38,6 +38,9 @@ import java.time.format.DateTimeFormatter;
  */
 public class AbsolutePunishmentDuration implements PunishmentDuration {
 
+    /**
+     * The maximum supported {@code LocalDateTime} value.
+     */
     public static final LocalDateTime MAX = LocalDateTime.of(9999, 12, 31, 23, 59, 59);
     public static final Timestamp MAX_TIMESTAMP = Timestamp.valueOf(MAX);
     private final LocalDateTime expiration;
@@ -47,14 +50,14 @@ public class AbsolutePunishmentDuration implements PunishmentDuration {
     }
 
     public static PunishmentDuration from(LocalDateTime ldt) {
-        if (ldt.compareTo(MAX) >= 0)
+        if (!ldt.isBefore(MAX))
             return PermanentPunishmentDuration.PERMANENT;
         return new AbsolutePunishmentDuration(ldt);
     }
 
     @Override
     public boolean isPermanent() {
-        return expiration.compareTo(MAX) >= 0;
+        return !expiration.isBefore(MAX);
     }
 
     @Override
