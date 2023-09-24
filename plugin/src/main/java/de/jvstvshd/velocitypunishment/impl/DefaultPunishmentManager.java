@@ -27,6 +27,8 @@ package de.jvstvshd.velocitypunishment.impl;
 import com.google.common.collect.ImmutableList;
 import com.velocitypowered.api.proxy.ProxyServer;
 import com.zaxxer.hikari.HikariDataSource;
+import de.chojo.sadu.base.QueryFactory;
+import de.chojo.sadu.wrapper.util.Row;
 import de.jvstvshd.velocitypunishment.VelocityPunishmentPlugin;
 import de.jvstvshd.velocitypunishment.api.duration.PunishmentDuration;
 import de.jvstvshd.velocitypunishment.api.punishment.*;
@@ -34,7 +36,8 @@ import de.jvstvshd.velocitypunishment.internal.Util;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
 
-import java.sql.*;
+import java.sql.SQLException;
+import java.sql.Timestamp;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executor;
@@ -43,7 +46,7 @@ import java.util.concurrent.Executors;
 
 import static de.jvstvshd.velocitypunishment.internal.Util.executeAsync;
 
-public class DefaultPunishmentManager implements PunishmentManager {
+public class DefaultPunishmentManager extends QueryFactory implements PunishmentManager {
 
     protected static final String QUERY_PUNISHMENT_WITH_ID = "SELECT uuid, name, type, expiration, reason FROM velocity_punishment WHERE punishment_id = ?";
     protected static final String SELECT_PUNISHMENT_WITH_TYPE = "SELECT expiration, reason, punishment_id FROM velocity_punishment WHERE uuid = ? AND type = ?";
@@ -54,6 +57,7 @@ public class DefaultPunishmentManager implements PunishmentManager {
     private final VelocityPunishmentPlugin plugin;
 
     public DefaultPunishmentManager(ProxyServer proxyServer, HikariDataSource dataSource, VelocityPunishmentPlugin plugin) {
+        super(dataSource);
         this.proxyServer = proxyServer;
         this.dataSource = dataSource;
         this.plugin = plugin;
@@ -76,42 +80,32 @@ public class DefaultPunishmentManager implements PunishmentManager {
             List<StandardPunishmentType> typeList = types.length == 0 ? Arrays.stream(StandardPunishmentType.values()).toList() : getTypes(types);
             List<Punishment> punishments = new ArrayList<>();
             for (StandardPunishmentType standardPunishmentType : typeList) {
-                try (Connection connection = dataSource.getConnection();
-                     PreparedStatement statement = connection.prepareStatement(SELECT_PUNISHMENT_WITH_TYPE)) {
-                    statement.setString(1, Util.trimUuid(player));
-                    statement.setString(2, standardPunishmentType.getName());
-                    punishments.addAll(getPunishments(statement.executeQuery(), standardPunishmentType, player));
-                }
+                var list = builder(Punishment.class)
+                        .query(SELECT_PUNISHMENT_WITH_TYPE)
+                        .parameter(paramBuilder -> paramBuilder.setString(player.toString()).setString(standardPunishmentType.getName()))
+                        .readRow(row -> getPunishments(row, standardPunishmentType, player)).all().get();
+                punishments.addAll(list);
             }
             return ImmutableList.copyOf(punishments);
         }, service);
     }
 
-    private List<Punishment> getPunishments(ResultSet resultSet, StandardPunishmentType type, UUID uuid) {
-        try {
-            List<Punishment> punishments = new ArrayList<>();
-            while (resultSet.next()) {
-                final Timestamp timestamp = resultSet.getTimestamp(1);
-                final PunishmentDuration duration = PunishmentDuration.fromTimestamp(timestamp);
-                final Component reason = LegacyComponentSerializer.legacySection().deserialize(resultSet.getString(2));
-                final UUID punishmentUuid = Util.parseUuid(resultSet.getString(3));
-                Punishment punishment;
-                switch (type) {
-                    case BAN, PERMANENT_BAN ->
-                            punishment = new DefaultBan(uuid, reason, dataSource, service, this, punishmentUuid, plugin.getPlayerResolver(), duration, plugin.getMessageProvider());
-                    case MUTE, PERMANENT_MUTE ->
-                            punishment = new DefaultMute(uuid, reason, dataSource, service, this, punishmentUuid, plugin.getPlayerResolver(), duration, plugin.getMessageProvider());
-                    case KICK ->
-                            punishment = new DefaultKick(uuid, reason, dataSource, service, this, punishmentUuid, plugin.getPlayerResolver(), plugin.getMessageProvider());
-                    default -> throw new UnsupportedOperationException("unhandled punishment type: " + type.getName());
-                }
-                punishments.add(punishment);
-            }
-            return punishments;
-        } catch (SQLException e) {
-            e.printStackTrace();
+    private Punishment getPunishments(Row row, StandardPunishmentType type, UUID uuid) throws SQLException {
+        final Timestamp timestamp = row.getTimestamp(1);
+        final PunishmentDuration duration = PunishmentDuration.fromTimestamp(timestamp);
+        final Component reason = LegacyComponentSerializer.legacySection().deserialize(row.getString(2));
+        final UUID punishmentUuid = Util.parseUuid(row.getString(3));
+        Punishment punishment;
+        switch (type) {
+            case BAN, PERMANENT_BAN ->
+                    punishment = new DefaultBan(uuid, reason, dataSource, service, this, punishmentUuid, plugin.getPlayerResolver(), duration, plugin.getMessageProvider());
+            case MUTE, PERMANENT_MUTE ->
+                    punishment = new DefaultMute(uuid, reason, dataSource, service, this, punishmentUuid, plugin.getPlayerResolver(), duration, plugin.getMessageProvider());
+            case KICK ->
+                    punishment = new DefaultKick(uuid, reason, dataSource, service, this, punishmentUuid, plugin.getPlayerResolver(), plugin.getMessageProvider());
+            default -> throw new UnsupportedOperationException("unhandled punishment type: " + type.getName());
         }
-        return ImmutableList.of();
+        return punishment;
     }
 
     protected List<StandardPunishmentType> getTypes(PunishmentType... types) {
@@ -126,15 +120,15 @@ public class DefaultPunishmentManager implements PunishmentManager {
     }
 
     @SuppressWarnings("unchecked")
-    private <T extends Punishment> T getPunishment(ResultSet resultSet, StandardPunishmentType type, UUID punishmentUuid, int uuidIndex,
+    private <T extends Punishment> T getPunishment(Row row, StandardPunishmentType type, UUID punishmentUuid, int uuidIndex,
                                                    int timestampIndex, int reasonIndex) throws SQLException {
-        final UUID uuid = Util.parseUuid(resultSet.getString(uuidIndex));
+        final UUID uuid = Util.parseUuid(row.getString(uuidIndex));
         PunishmentDuration duration = null;
         if (timestampIndex != -1) {
-            final Timestamp timestamp = resultSet.getTimestamp(timestampIndex);
+            final Timestamp timestamp = row.getTimestamp(timestampIndex);
             duration = PunishmentDuration.fromTimestamp(timestamp);
         }
-        final Component reason = LegacyComponentSerializer.legacySection().deserialize(resultSet.getString(reasonIndex));
+        final Component reason = LegacyComponentSerializer.legacySection().deserialize(row.getString(reasonIndex));
         return (T) switch (type) {
             case BAN, PERMANENT_BAN ->
                     new DefaultBan(uuid, reason, dataSource, service, this, punishmentUuid, plugin.getPlayerResolver(), duration, plugin.getMessageProvider());
@@ -145,26 +139,20 @@ public class DefaultPunishmentManager implements PunishmentManager {
         };
     }
 
+    @SuppressWarnings("unchecked")
     @Override
-    public <T extends Punishment> CompletableFuture<Optional<T>> getPunishment(UUID punishmentId, Executor service) {
-        return de.jvstvshd.velocitypunishment.common.plugin.Util.executeAsync(() -> {
-            try (Connection connection = dataSource.getConnection();
-                 PreparedStatement statement = connection.prepareStatement(QUERY_PUNISHMENT_WITH_ID)) {
-                statement.setString(1, de.jvstvshd.velocitypunishment.common.plugin.Util.trimUuid(punishmentId));
-                ResultSet rs = statement.executeQuery();
-                if (rs.next()) {
-                    return Optional.of(getPunishment(rs, punishmentId, 1, 4, 5, 3));
-                } else {
-                    return Optional.empty();
-                }
-            }
-        }, service);
+    public CompletableFuture<Optional<Punishment>> getPunishment(UUID punishmentId, Executor service) {
+        return builder(Punishment.class)
+                .query(QUERY_PUNISHMENT_WITH_ID)
+                .parameter(paramBuilder -> paramBuilder.setString(punishmentId.toString()))
+                .readRow(row -> getPunishment(row, punishmentId, 1, 4, 5, 3))
+                .first();
     }
 
     @SuppressWarnings("SameParameterValue")
-    protected <T extends Punishment> T getPunishment(ResultSet resultSet, UUID punishmentId, int uuidIndex, int timestampIndex, int reasonIndex,
+    protected <T extends Punishment> T getPunishment(Row row, UUID punishmentId, int uuidIndex, int timestampIndex, int reasonIndex,
                                                      int typeIndex) throws SQLException {
-        return getPunishment(resultSet, StandardPunishmentType.valueOf(resultSet.getString(typeIndex).toUpperCase(Locale.ROOT)),
+        return getPunishment(row, StandardPunishmentType.valueOf(row.getString(typeIndex).toUpperCase(Locale.ROOT)),
                 punishmentId, uuidIndex, timestampIndex, reasonIndex);
     }
 

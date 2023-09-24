@@ -31,6 +31,8 @@ public class DataBaseData {
     private String username = "";
     private String database = "";
     private String port = "";
+    private int maxPoolSize = 3;
+    private int minIdle = 1;
 
     public String getHost() {
         return host;
@@ -50,5 +52,13 @@ public class DataBaseData {
 
     public String getPort() {
         return port;
+    }
+
+    public int getMaxPoolSize() {
+        return maxPoolSize;
+    }
+
+    public int getMinIdle() {
+        return minIdle;
     }
 }

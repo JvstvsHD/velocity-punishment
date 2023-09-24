@@ -24,6 +24,7 @@
 
 package de.jvstvshd.velocitypunishment.api.punishment;
 
+import de.jvstvshd.velocitypunishment.api.PunishmentException;
 import de.jvstvshd.velocitypunishment.api.duration.PunishmentDuration;
 import de.jvstvshd.velocitypunishment.api.punishment.util.ReasonHolder;
 import net.kyori.adventure.text.Component;
@@ -65,14 +66,14 @@ public interface Punishment extends ReasonHolder {
      *
      * @return a {@link CompletableFuture} containing the exerted punishment
      */
-    CompletableFuture<Punishment> punish();
+    CompletableFuture<Punishment> punish() throws PunishmentException;
 
     /**
      * Cancels this punishment thus allowing the player e.g. to join the server
      *
      * @return a {@link CompletableFuture} containing the cancelled punishment
      */
-    CompletableFuture<Punishment> cancel();
+    CompletableFuture<Punishment> cancel() throws PunishmentException;
 
     /**
      * Changes the duration and reason of this punishment. This method can be used if a player created an appeal an it was accepted.
@@ -82,7 +83,7 @@ public interface Punishment extends ReasonHolder {
      * @return a {@link CompletableFuture} containing the new punishment
      * @see #cancel()
      */
-    CompletableFuture<Punishment> change(PunishmentDuration newDuration, Component newReason);
+    CompletableFuture<Punishment> change(PunishmentDuration newDuration, Component newReason) throws PunishmentException;
 
     /**
      * Returns the type of this punishment. By default, this is a field from {@link StandardPunishmentType}.

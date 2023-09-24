@@ -27,7 +27,9 @@ package de.jvstvshd.velocitypunishment.listener;
 import com.velocitypowered.api.event.ResultedEvent;
 import com.velocitypowered.api.event.Subscribe;
 import com.velocitypowered.api.event.connection.LoginEvent;
+import com.velocitypowered.api.event.player.PlayerChatEvent;
 import com.velocitypowered.api.proxy.ProxyServer;
+import de.chojo.sadu.base.QueryFactory;
 import de.jvstvshd.velocitypunishment.VelocityPunishmentPlugin;
 import de.jvstvshd.velocitypunishment.api.punishment.Ban;
 import de.jvstvshd.velocitypunishment.api.punishment.Mute;
@@ -44,37 +46,43 @@ import java.util.Objects;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.TimeUnit;
 
-public final class ConnectListener {
+public final class ConnectListener extends QueryFactory {
     private final VelocityPunishmentPlugin plugin;
     private final ExecutorService service;
     private final ProxyServer proxyServer;
 
     public ConnectListener(VelocityPunishmentPlugin plugin,
                            ExecutorService service, ProxyServer proxyServer) {
+        super(plugin.getDataSource());
         this.plugin = plugin;
         this.service = service;
         this.proxyServer = proxyServer;
     }
 
     @Subscribe
+    public void onChat(PlayerChatEvent event) {
+
+    }
+
+    @Subscribe
     public void onConnect(LoginEvent event) throws Exception {
         if (plugin.whitelistActive()) {
             plugin.getLogger().info("Whitelist is activated.");
-            try (var connection = plugin.getDataSource().getConnection();
-                 var statement = connection.prepareStatement("SELECT * FROM velocity_punishment_whitelist WHERE uuid = ?;")) {
-                statement.setString(1, Util.trimUuid(event.getPlayer().getUniqueId()));
-                if (!statement.executeQuery().next()) {
-                    event.setResult(ResultedEvent.ComponentResult.denied(Component.text("WHITELIST").color(NamedTextColor.DARK_RED)));
-                    return;
-                }
-            }
+            builder(Boolean.class).query("SELECT * FROM velocity_punishment_whitelist WHERE uuid = ?;")
+                    .parameter(paramBuilder -> paramBuilder.setUuidAsString(event.getPlayer().getUniqueId()))
+                    .readRow(row -> true)
+                    .first().thenAcceptAsync(whitelisted -> {
+                        if (whitelisted.isEmpty()) {
+                            event.setResult(ResultedEvent.ComponentResult.denied(Component.text("WHITELIST").color(NamedTextColor.DARK_RED)));
+                        }
+                    });
         }
         List<Punishment> punishments;
         try {
             punishments = plugin.getPunishmentManager().getPunishments(event.getPlayer().getUniqueId(), service, StandardPunishmentType.BAN,
                     StandardPunishmentType.PERMANENT_BAN, StandardPunishmentType.MUTE, StandardPunishmentType.PERMANENT_MUTE).get(10, TimeUnit.SECONDS);
         } catch (Exception e) {
-            e.printStackTrace();
+            plugin.getLogger().error("Cannot retrieve punishment for player " + event.getPlayer().getUsername() + " (" + event.getPlayer().getUniqueId() + ")", e);
             event.setResult(ResultedEvent.ComponentResult.denied(plugin.getMessageProvider().internalError(event.getPlayer(), true)));
             return;
         }
@@ -90,7 +98,7 @@ public final class ConnectListener {
             try {
                 plugin.communicator().queueMute(mute, event.getPlayer(), MuteData.ADD);
             } catch (Exception e) {
-                e.printStackTrace();
+                plugin.getLogger().error("Cannot send mute to bungee", e);
             }
         }
         if (bans.isEmpty()) {
@@ -105,7 +113,7 @@ public final class ConnectListener {
         } else {
             ban.cancel().whenCompleteAsync((unused, t) -> {
                 if (t != null) {
-                    t.printStackTrace();
+                    plugin.getLogger().error("An error occurred while cancelling ban " + ban.getPunishmentUuid().toString().toLowerCase(), t);
                     return;
                 }
                 proxyServer.getConsoleCommandSource().sendMessage(Component.text()
@@ -147,5 +155,4 @@ public final class ConnectListener {
                 "service=" + service + ", " +
                 "proxyServer=" + proxyServer + ']';
     }
-
 }

@@ -29,10 +29,13 @@ import com.mojang.brigadier.arguments.StringArgumentType;
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
 import com.mojang.brigadier.builder.RequiredArgumentBuilder;
 import com.mojang.brigadier.context.CommandContext;
+import com.mojang.brigadier.suggestion.SuggestionsBuilder;
 import com.velocitypowered.api.command.CommandSource;
 import com.velocitypowered.api.command.SimpleCommand;
 import com.velocitypowered.api.proxy.Player;
 import com.velocitypowered.api.proxy.ProxyServer;
+import de.chojo.sadu.wrapper.QueryBuilder;
+import de.chojo.sadu.wrapper.QueryBuilderConfig;
 import de.jvstvshd.velocitypunishment.VelocityPunishmentPlugin;
 import de.jvstvshd.velocitypunishment.api.message.MessageProvider;
 import de.jvstvshd.velocitypunishment.api.punishment.Punishment;
@@ -43,10 +46,8 @@ import net.kyori.adventure.text.event.ClickEvent;
 import net.kyori.adventure.text.event.HoverEvent;
 import net.kyori.adventure.text.event.HoverEventSource;
 import net.kyori.adventure.text.format.NamedTextColor;
+import net.kyori.adventure.text.minimessage.MiniMessage;
 
-import java.sql.Connection;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
 import java.util.*;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CompletableFuture;
@@ -76,16 +77,13 @@ public class Util {
         return RequiredArgumentBuilder.<CommandSource, String>argument("player", StringArgumentType.word()).suggests((context, builder) -> Util.executeAsync(() -> {
             var input = builder.getRemainingLowerCase();
             if (input.isBlank() || input.length() <= 2) return builder.build();
-            try (Connection connection = plugin.getDataSource().getConnection()) {
-                PreparedStatement statement = connection.prepareStatement("SELECT name FROM velocity_punishment WHERE name LIKE ?");
-                statement.setString(1, input + "%");
-                ResultSet resultSet = statement.executeQuery();
-                while (resultSet.next()) {
-                    String name = resultSet.getString("name");
-                    builder.suggest(name);
-                }
-                plugin.getServer().getAllPlayers().stream().map(Player::getUsername).forEach(builder::suggest);
-            }
+            //noinspection ResultOfMethodCallIgnored
+            QueryBuilder.builder(plugin.getDataSource(), SuggestionsBuilder.class)
+                    .configure(QueryBuilderConfig.defaultConfig())
+                    .query("SELECT name FROM velocity_punishment WHERE name LIKE ?")
+                    .parameter(paramBuilder -> paramBuilder.setString(input + "%"))
+                    .readRow(row -> builder.suggest(row.getString("name")));
+            plugin.getServer().getAllPlayers().stream().map(Player::getUsername).forEach(builder::suggest);
             return builder.build();
         }, plugin.getService()));
     }
@@ -145,12 +143,16 @@ public class Util {
         return origin.toString().toLowerCase().replace("-", "");
     }
 
+    public static UUID trimmedUuid(UUID origin) {
+        return UUID.fromString(trimUuid(origin));
+    }
+
     public static boolean sendErrorMessageIfErrorOccurred(CommandContext<CommandSource> context, UUID uuid, Throwable throwable, VelocityPunishmentPlugin plugin) {
         var source = context.getSource();
         var player = context.getArgument("player", String.class);
         if (throwable != null) {
             source.sendMessage(plugin.getMessageProvider().internalError(source, true));
-            throwable.printStackTrace();
+            plugin.getLogger().error("Cannot retrieve player uuid for " + player, throwable);
             return true;
         }
         if (uuid == null) {
@@ -170,5 +172,14 @@ public class Util {
                     .stream().filter(s -> s.toLowerCase().startsWith(args[0])).collect(Collectors.toList());
         }
         return ImmutableList.of();
+    }
+
+    public static void sendErrorMessage(CommandContext<CommandSource> context, Throwable throwable) {
+        var source = context.getSource();
+        if (!source.hasPermission("velocitypunishment.command.debug")) {
+            source.sendMessage(MiniMessage.miniMessage().deserialize("<red>An error occurred.</red>"));
+            return;
+        }
+        context.getSource().sendMessage(MiniMessage.miniMessage().deserialize("<red>An error occurred: " + throwable.getMessage() + "</red>"));
     }
 }

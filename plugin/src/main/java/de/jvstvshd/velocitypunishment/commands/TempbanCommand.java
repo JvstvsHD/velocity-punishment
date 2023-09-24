@@ -29,6 +29,7 @@ import com.mojang.brigadier.context.CommandContext;
 import com.velocitypowered.api.command.BrigadierCommand;
 import com.velocitypowered.api.command.CommandSource;
 import de.jvstvshd.velocitypunishment.VelocityPunishmentPlugin;
+import de.jvstvshd.velocitypunishment.api.PunishmentException;
 import de.jvstvshd.velocitypunishment.api.duration.PunishmentDuration;
 import de.jvstvshd.velocitypunishment.internal.PunishmentHelper;
 import de.jvstvshd.velocitypunishment.internal.Util;
@@ -64,21 +65,26 @@ public class TempbanCommand {
             }
             PunishmentDuration duration = optDuration.get();
             TextComponent reason = PunishmentHelper.parseReason(context);
-            plugin.getPunishmentManager().createBan(uuid, reason, duration).punish().whenComplete((ban, t) -> {
-                if (t != null) {
-                    source.sendMessage(plugin.getMessageProvider().internalError(source, true));
-                    t.printStackTrace();
-                    return;
-                }
-                String until = duration.expiration().format(DateTimeFormatter.ofPattern("dd.MM.yyyy HH:mm:ss"));
-                String uuidString = uuid.toString().toLowerCase();
-                source.sendMessage(plugin.getMessageProvider().provide("command.tempban.success", source, true,
-                        copyComponent(player, plugin.getMessageProvider(), source).color(NamedTextColor.YELLOW).decorate(TextDecoration.BOLD),
-                        copyComponent(uuidString, plugin.getMessageProvider(), source).color(NamedTextColor.RED).decorate(TextDecoration.BOLD),
-                        reason,
-                        Component.text(until).color(NamedTextColor.GREEN)).color(NamedTextColor.GREEN));
-                source.sendMessage(plugin.getMessageProvider().provide("commands.general.punishment.id", source, true, Component.text(ban.getPunishmentUuid().toString().toLowerCase()).color(NamedTextColor.YELLOW)));
-            });
+            try {
+                plugin.getPunishmentManager().createBan(uuid, reason, duration).punish().whenComplete((ban, t) -> {
+                    if (t != null) {
+                        source.sendMessage(plugin.getMessageProvider().internalError(source, true));
+                        plugin.getLogger().error("An error occurred while punishing " + uuid.toString() + "/" + plugin + ".", t);
+                        return;
+                    }
+                    String until = duration.expiration().format(DateTimeFormatter.ofPattern("dd.MM.yyyy HH:mm:ss"));
+                    String uuidString = uuid.toString().toLowerCase();
+                    source.sendMessage(plugin.getMessageProvider().provide("command.tempban.success", source, true,
+                            copyComponent(player, plugin.getMessageProvider(), source).color(NamedTextColor.YELLOW).decorate(TextDecoration.BOLD),
+                            copyComponent(uuidString, plugin.getMessageProvider(), source).color(NamedTextColor.RED).decorate(TextDecoration.BOLD),
+                            reason,
+                            Component.text(until).color(NamedTextColor.GREEN)).color(NamedTextColor.GREEN));
+                    source.sendMessage(plugin.getMessageProvider().provide("commands.general.punishment.id", source, true, Component.text(ban.getPunishmentUuid().toString().toLowerCase()).color(NamedTextColor.YELLOW)));
+                });
+            } catch (PunishmentException e) {
+                plugin.getLogger().error("An error occurred while punishing " + uuid.toString() + "/" + plugin + ".", e);
+                Util.sendErrorMessage(context, e);
+            }
         }, plugin.getService());
         return Command.SINGLE_SUCCESS;
     }

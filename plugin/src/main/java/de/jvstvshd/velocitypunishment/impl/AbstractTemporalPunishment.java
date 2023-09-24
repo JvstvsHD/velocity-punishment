@@ -24,23 +24,21 @@
 
 package de.jvstvshd.velocitypunishment.impl;
 
+import de.jvstvshd.velocitypunishment.api.PunishmentException;
 import de.jvstvshd.velocitypunishment.api.duration.PunishmentDuration;
 import de.jvstvshd.velocitypunishment.api.message.MessageProvider;
-import de.jvstvshd.velocitypunishment.api.punishment.Mute;
 import de.jvstvshd.velocitypunishment.api.punishment.Punishment;
+import de.jvstvshd.velocitypunishment.api.punishment.StandardPunishmentType;
 import de.jvstvshd.velocitypunishment.api.punishment.TemporalPunishment;
 import de.jvstvshd.velocitypunishment.api.punishment.util.PlayerResolver;
 import de.jvstvshd.velocitypunishment.common.plugin.MuteData;
-import de.jvstvshd.velocitypunishment.internal.Util;
 import net.kyori.adventure.text.Component;
 
 import javax.sql.DataSource;
-import java.sql.Connection;
-import java.sql.PreparedStatement;
-import java.sql.Timestamp;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 public abstract class AbstractTemporalPunishment extends AbstractPunishment implements TemporalPunishment {
 
@@ -80,29 +78,58 @@ public abstract class AbstractTemporalPunishment extends AbstractPunishment impl
     }
 
     @Override
-    public CompletableFuture<Punishment> change(PunishmentDuration newDuration, Component newReason) {
-        return executeAsync(() -> {
-            try (Connection connection = getDataSource().getConnection();
-                 PreparedStatement statement = connection.prepareStatement(APPLY_CHANGE)) {
-                statement.setString(1, convertReason(newReason));
-                statement.setTimestamp(2, Timestamp.valueOf(newDuration.expiration()));
-                statement.setBoolean(3, newDuration.isPermanent());
-                statement.setString(4, Util.trimUuid(getPunishmentUuid()));
-                statement.executeUpdate();
-            }
-            if (getType().isBan()) {
-                return new DefaultBan(getPlayerUuid(), newReason, getDataSource(), getPlayerResolver(), getPunishmentManager(), getService(), newDuration, getMessageProvider());
-            } else if (getType().isMute()) {
-                var newMute = new DefaultMute(getPlayerUuid(), newReason, getDataSource(), getPlayerResolver(), getPunishmentManager(), getService(), newDuration, getMessageProvider());
-                newMute.queueMute(MuteData.UPDATE);
-                return newMute;
-            } else {
-                throw new IllegalStateException("punishment type is not a ban or mute");
-            }
-        }, getService());
+    public CompletableFuture<Punishment> change(PunishmentDuration newDuration, Component newReason) throws PunishmentException {
+        if (!getType().isBan() && !getType().isMute()) {
+            throw new IllegalStateException("only bans and mutes can be changed");
+        }
+        return builder()
+                .query(APPLY_CHANGE)
+                .parameter(paramBuilder -> paramBuilder.setString(convertReason(newReason))
+                        .setTimestamp(newDuration.expirationAsTimestamp())
+                ).update()
+                .send()
+                .thenApply(result -> {
+                    if (getType().isBan()) {
+                        return new DefaultBan(getPlayerUuid(), newReason, getDataSource(), getPlayerResolver(), getPunishmentManager(), getService(), newDuration, getMessageProvider());
+                    } else if (getType().isMute()) {
+                        var newMute = new DefaultMute(getPlayerUuid(), newReason, getDataSource(), getPlayerResolver(), getPunishmentManager(), getService(), newDuration, getMessageProvider());
+                        newMute.queueMute(MuteData.UPDATE);
+                        return newMute;
+                    } else {
+                        throw new IllegalStateException("punishment type is not a ban or mute");
+                    }
+                });
     }
 
-    void queueMute(int type) throws Exception {
-        getPunishmentManager().plugin().communicator().queueMute((Mute) this, type);
+    @Override
+    public CompletableFuture<Punishment> cancel() throws PunishmentException {
+        return builder()
+                .query(APPLY_CANCELLATION)
+                .parameter(paramBuilder -> paramBuilder.setUuidAsString(getPunishmentUuid()))
+                .delete()
+                .send().thenApply(updateResult -> this);
+    }
+
+    @Override
+    public abstract StandardPunishmentType getType();
+
+    @Override
+    public CompletableFuture<Punishment> punish() throws PunishmentException {
+        checkValidity();
+        var duration = getDuration().absolute();
+        return executeAsync(() -> {
+            builder()
+                    .query(APPLY_PUNISHMENT)
+                    .parameter(paramBuilder -> paramBuilder.setUuidAsString(getPlayerUuid())
+                            .setString(getPlayerResolver().getOrQueryPlayerName(getPlayerUuid(),
+                                    Executors.newSingleThreadExecutor()).join().toLowerCase())
+                            .setString(getType().getName())
+                            .setTimestamp(duration.expirationAsTimestamp())
+                            .setString(convertReason(getReason()))
+                            .setUuidAsString(getPunishmentUuid())
+                    ).insert()
+                    .sendSync();
+            return this;
+        }, getService());
     }
 }

@@ -31,17 +31,19 @@ import com.mojang.brigadier.builder.RequiredArgumentBuilder;
 import com.mojang.brigadier.context.CommandContext;
 import com.velocitypowered.api.command.BrigadierCommand;
 import com.velocitypowered.api.command.CommandSource;
+import de.chojo.sadu.wrapper.QueryBuilder;
+import de.chojo.sadu.wrapper.QueryBuilderConfig;
 import de.jvstvshd.velocitypunishment.VelocityPunishmentPlugin;
 import de.jvstvshd.velocitypunishment.internal.Util;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
 
-import java.sql.SQLException;
 import java.util.List;
 
 public class WhitelistCommand {
 
     public static final List<String> options = ImmutableList.of("add", "remove");
+
 
     public static BrigadierCommand whitelistCommand(VelocityPunishmentPlugin plugin) {
         var node = Util.permissibleCommand("whitelist", "velocitypunishment.command.whitelist")
@@ -63,43 +65,41 @@ public class WhitelistCommand {
             return Command.SINGLE_SUCCESS;
         }
         var player = context.getArgument("player", String.class);
-        plugin.getPlayerResolver().getOrQueryPlayerUuid(player, plugin.getService()).whenCompleteAsync((uuid, throwable) -> {
-            if (Util.sendErrorMessageIfErrorOccurred(context, uuid, throwable, plugin)) return;
-            try (var connection = plugin.getDataSource().getConnection();
-                 var statement = connection.prepareStatement("SELECT * FROM velocity_punishment_whitelist WHERE uuid = ?;")) {
-                statement.setString(1, Util.trimUuid(uuid));
-                var rs = statement.executeQuery();
-                var whitelisted = rs.next() ? plugin.getMessageProvider().provide("whitelist.status.whitelisted", source) :
-                        plugin.getMessageProvider().provide("whitelist.status.disallowed", source);
-                source.sendMessage(plugin.getMessageProvider().provide("command.whitelist.status", source, true, Component.text(player).color(NamedTextColor.YELLOW), whitelisted.color(NamedTextColor.YELLOW)));
-            } catch (SQLException e) {
-                throw new RuntimeException(e);
-            }
-        }, plugin.getService());
         if (context.getArguments().containsKey("option")) {
-            var option = context.getArgument("option", String.class);
+            var option = context.getArgument("option", String.class).toLowerCase();
             switch (option) {
                 case "add", "remove" ->
                         plugin.getPlayerResolver().getOrQueryPlayerUuid(player, plugin.getService()).whenCompleteAsync((uuid, throwable) -> {
                             if (Util.sendErrorMessageIfErrorOccurred(context, uuid, throwable, plugin)) return;
-                            try (var connection = plugin.getDataSource().getConnection();
-                                 var statement = connection.prepareStatement(option.equals("remove") ? "INSERT INTO velocity_punishment_whitelist (uuid) VALUES (?);" :
-                                         "DELETE FROM velocity_punishment_whitelist WHERE uuid = ?;")) {
-                                statement.setString(1, Util.trimUuid(uuid));
-                                statement.executeUpdate();
-                                source.sendMessage(plugin.getMessageProvider().provide("command.whitelist.success", source, true));
-                                if (option.equals("remove")) {
-                                    plugin.getServer().getPlayer(uuid).ifPresent(pl -> pl.disconnect(Component.text("You have been blacklisted.").color(NamedTextColor.DARK_RED)));
-                                }
-                            } catch (SQLException e) {
-                                e.printStackTrace();
-                                source.sendMessage(plugin.getMessageProvider().internalError(source, true));
+                            var builder = QueryBuilder.builder(plugin.getDataSource())
+                                    .configure(QueryBuilderConfig.defaultConfig())
+                                    .query(option.equalsIgnoreCase("remove") ? "DELETE FROM velocity_punishment_whitelist WHERE uuid = ?;" :
+                                            "INSERT INTO velocity_punishment_whitelist (uuid) VALUES (?);")
+                                    .parameter(paramBuilder -> paramBuilder.setUuidAsString(uuid));
+                            if (option.equalsIgnoreCase("remove")) {
+                                builder.delete().send();
+                                plugin.getServer().getPlayer(uuid).ifPresent(pl -> pl.disconnect(Component.text("You have been blacklisted.").color(NamedTextColor.DARK_RED)));
+                            } else {
+                                builder.insert().send();
                             }
                         }, plugin.getService());
                 default ->
                         source.sendMessage(plugin.getMessageProvider().provide("command.whitelist.usage", source, true));
             }
+            return Command.SINGLE_SUCCESS;
         }
+        plugin.getPlayerResolver().getOrQueryPlayerUuid(player, plugin.getService()).whenCompleteAsync((uuid, throwable) -> {
+            if (Util.sendErrorMessageIfErrorOccurred(context, uuid, throwable, plugin)) return;
+            QueryBuilder.builder(plugin.getDataSource(), Boolean.class)
+                    .configure(QueryBuilderConfig.defaultConfig())
+                    .query("SELECT uuid FROM velocity_punishment_whitelist WHERE uuid = ?;")
+                    .parameter(paramBuilder -> paramBuilder.setUuidAsString(uuid))
+                    .readRow(rs -> true).first().thenAcceptAsync(aBoolean -> {
+                        var whitelisted = aBoolean.isPresent() ? plugin.getMessageProvider().provide("whitelist.status.whitelisted", source) :
+                                plugin.getMessageProvider().provide("whitelist.status.disallowed", source);
+                        source.sendMessage(plugin.getMessageProvider().provide("command.whitelist.status", source, true, Component.text(player).color(NamedTextColor.YELLOW), whitelisted.color(NamedTextColor.YELLOW)));
+                    });
+        }, plugin.getService());
         return Command.SINGLE_SUCCESS;
     }
 }

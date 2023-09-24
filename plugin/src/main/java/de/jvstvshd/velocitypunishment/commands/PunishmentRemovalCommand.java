@@ -29,6 +29,7 @@ import com.mojang.brigadier.context.CommandContext;
 import com.velocitypowered.api.command.BrigadierCommand;
 import com.velocitypowered.api.command.CommandSource;
 import de.jvstvshd.velocitypunishment.VelocityPunishmentPlugin;
+import de.jvstvshd.velocitypunishment.api.PunishmentException;
 import de.jvstvshd.velocitypunishment.api.punishment.Punishment;
 import de.jvstvshd.velocitypunishment.api.punishment.PunishmentType;
 import de.jvstvshd.velocitypunishment.api.punishment.StandardPunishmentType;
@@ -62,7 +63,7 @@ public class PunishmentRemovalCommand {
             if (Util.sendErrorMessageIfErrorOccurred(context, uuid, throwable, plugin)) return;
             plugin.getPunishmentManager().getPunishments(uuid, plugin.getService(), types).whenComplete((punishments, t) -> {
                 if (t != null) {
-                    t.printStackTrace();
+                    plugin.getLogger().error("An error occurred while getting punishments for player " + uuid, t);
                     source.sendMessage(plugin.getMessageProvider().internalError(source, true));
                     return;
                 }
@@ -77,14 +78,19 @@ public class PunishmentRemovalCommand {
                     }
                 } else {
                     Punishment punishment = punishments.get(0);
-                    punishment.cancel().whenCompleteAsync((unused, th) -> {
-                        if (th != null) {
-                            th.printStackTrace();
-                            source.sendMessage(plugin.getMessageProvider().internalError(source, true));
-                            return;
-                        }
-                        source.sendMessage(plugin.getMessageProvider().provide("command." + commandName + ".success").color(NamedTextColor.GREEN));
-                    }, plugin.getService());
+                    try {
+                        punishment.cancel().whenCompleteAsync((unused, th) -> {
+                            if (th != null) {
+                                plugin.getLogger().error("An error occurred while removing punishment " + punishment.getPunishmentUuid() + " for player " + uuid, th);
+                                source.sendMessage(plugin.getMessageProvider().internalError(source, true));
+                                return;
+                            }
+                            source.sendMessage(plugin.getMessageProvider().provide("command." + commandName + ".success").color(NamedTextColor.GREEN));
+                        }, plugin.getService());
+                    } catch (PunishmentException e) {
+                        plugin.getLogger().error("An error occurred while removing punishment " + punishment.getPunishmentUuid() + " for player " + uuid, e);
+                        Util.sendErrorMessage(context, e);
+                    }
                 }
             });
         }, plugin.getService());

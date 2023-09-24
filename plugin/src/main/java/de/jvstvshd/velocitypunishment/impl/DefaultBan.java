@@ -26,28 +26,24 @@ package de.jvstvshd.velocitypunishment.impl;
 
 import com.velocitypowered.api.command.CommandSource;
 import com.velocitypowered.api.proxy.Player;
+import de.jvstvshd.velocitypunishment.api.PunishmentException;
 import de.jvstvshd.velocitypunishment.api.duration.PunishmentDuration;
 import de.jvstvshd.velocitypunishment.api.message.MessageProvider;
 import de.jvstvshd.velocitypunishment.api.punishment.Ban;
 import de.jvstvshd.velocitypunishment.api.punishment.Punishment;
 import de.jvstvshd.velocitypunishment.api.punishment.StandardPunishmentType;
 import de.jvstvshd.velocitypunishment.api.punishment.util.PlayerResolver;
-import de.jvstvshd.velocitypunishment.internal.Util;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.format.TextDecoration;
 
 import javax.sql.DataSource;
-import java.sql.Connection;
-import java.sql.PreparedStatement;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.TimeUnit;
 
 public class DefaultBan extends AbstractTemporalPunishment implements Ban {
 
@@ -65,47 +61,18 @@ public class DefaultBan extends AbstractTemporalPunishment implements Ban {
     }
 
     @Override
-    public CompletableFuture<Punishment> punish() {
-        checkValidity();
-        return executeAsync(() -> {
-            tryKick();
-            try (Connection connection = getDataSource().getConnection();
-                 PreparedStatement statement = connection.prepareStatement(APPLY_PUNISHMENT)) {
-                statement.setString(1, Util.trimUuid(getPlayerUuid()));
-                statement.setString(2, getPlayerResolver().getOrQueryPlayerName(getPlayerUuid(),
-                        Executors.newSingleThreadExecutor()).get(5, TimeUnit.SECONDS).toLowerCase());
-                statement.setString(3, getType().name());
-                statement.setTimestamp(4, getDuration().expirationAsTimestamp());
-                statement.setString(5, convertReason(getReason()));
-                statement.setString(6, Util.trimUuid(getPunishmentUuid()));
-                statement.executeUpdate();
-                return this;
-            }
-        }, getService());
-    }
-
-    @Override
-    public CompletableFuture<Punishment> cancel() {
-        return executeAsync(() -> {
-            try (Connection connection = getDataSource().getConnection();
-                 PreparedStatement statement = connection.prepareStatement(APPLY_ANNUL)) {
-                statement.setString(1, Util.trimUuid(getPunishmentUuid()));
-                statement.executeUpdate();
-                return this;
-            }
-        }, getService());
-    }
-
-    @Override
-    public StandardPunishmentType getType() {
-        return getDuration().isPermanent() ? StandardPunishmentType.PERMANENT_BAN : StandardPunishmentType.BAN;
+    public CompletableFuture<Punishment> punish() throws PunishmentException {
+        var punishment = super.punish();
+        tryKick();
+        return punishment;
     }
 
     private void tryKick() {
         Optional<Player> optionalPlayer = getPunishmentManager().getServer().getPlayer(getPlayerUuid());
         if (optionalPlayer.isEmpty())
             return;
-        optionalPlayer.get().disconnect(createFullReason(optionalPlayer.get()));
+        var reason = createFullReason(optionalPlayer.get());
+        optionalPlayer.get().disconnect(reason);
     }
 
     @Override
@@ -118,12 +85,19 @@ public class DefaultBan extends AbstractTemporalPunishment implements Ban {
         } else {
             var until = Component.text(getDuration().expiration().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")))
                     .color(NamedTextColor.YELLOW);
-            return getMessageProvider().provide("punishment.ban.temp.full-reason", source, true, Component.text(getDuration().remainingDuration()).color(NamedTextColor.YELLOW), getReason(), until);
+            return getMessageProvider().provide("punishment.ban.temp.full-reason", source, true,
+                    Component.text(getDuration().remainingDuration()).color(NamedTextColor.YELLOW), getReason(), until);
+
         }
     }
 
     @Override
     public boolean isPermanent() {
         return getDuration().isPermanent();
+    }
+
+    @Override
+    public StandardPunishmentType getType() {
+        return getDuration().isPermanent() ? StandardPunishmentType.PERMANENT_BAN : StandardPunishmentType.BAN;
     }
 }

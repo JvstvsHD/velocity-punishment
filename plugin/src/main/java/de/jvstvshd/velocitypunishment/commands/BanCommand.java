@@ -29,6 +29,7 @@ import com.mojang.brigadier.context.CommandContext;
 import com.velocitypowered.api.command.BrigadierCommand;
 import com.velocitypowered.api.command.CommandSource;
 import de.jvstvshd.velocitypunishment.VelocityPunishmentPlugin;
+import de.jvstvshd.velocitypunishment.api.PunishmentException;
 import de.jvstvshd.velocitypunishment.internal.PunishmentHelper;
 import de.jvstvshd.velocitypunishment.internal.Util;
 import net.kyori.adventure.text.format.NamedTextColor;
@@ -53,18 +54,23 @@ public class BanCommand {
         var punishmentManager = plugin.getPunishmentManager();
         playerResolver.getOrQueryPlayerUuid(player, plugin.getService()).whenCompleteAsync((uuid, throwable) -> {
             if (Util.sendErrorMessageIfErrorOccurred(context, uuid, throwable, plugin)) return;
-            punishmentManager.createPermanentBan(uuid, reason).punish().whenComplete((ban, t) -> {
-                if (t != null) {
-                    t.printStackTrace();
-                    source.sendMessage(plugin.getMessageProvider().internalError(source, true));
-                } else {
-                    String uuidString = uuid.toString().toLowerCase();
-                    source.sendMessage(plugin.getMessageProvider().provide("command.ban.success", source, true, copyComponent(player, plugin.getMessageProvider(), source).color(NamedTextColor.YELLOW).decorate(TextDecoration.BOLD),
-                            copyComponent(uuidString, plugin.getMessageProvider(), source).color(NamedTextColor.YELLOW).decorate(TextDecoration.BOLD),
-                            reason).color(NamedTextColor.GREEN));
-                    source.sendMessage(plugin.getMessageProvider().provide("commands.general.punishment.id", source, true, copyComponent(ban.getPunishmentUuid().toString().toLowerCase(), plugin.getMessageProvider(), source).color(NamedTextColor.YELLOW)));
-                }
-            });
+            try {
+                punishmentManager.createPermanentBan(uuid, reason).punish().whenComplete((ban, t) -> {
+                    if (t != null) {
+                        plugin.getLogger().error("An error occurred while creating a ban for player " + player + " (" + uuid + ")", t);
+                        source.sendMessage(plugin.getMessageProvider().internalError(source, true));
+                    } else {
+                        String uuidString = uuid.toString().toLowerCase();
+                        source.sendMessage(plugin.getMessageProvider().provide("command.ban.success", source, true, copyComponent(player, plugin.getMessageProvider(), source).color(NamedTextColor.YELLOW).decorate(TextDecoration.BOLD),
+                                copyComponent(uuidString, plugin.getMessageProvider(), source).color(NamedTextColor.YELLOW).decorate(TextDecoration.BOLD),
+                                reason).color(NamedTextColor.GREEN));
+                        source.sendMessage(plugin.getMessageProvider().provide("commands.general.punishment.id", source, true, copyComponent(ban.getPunishmentUuid().toString().toLowerCase(), plugin.getMessageProvider(), source).color(NamedTextColor.YELLOW)));
+                    }
+                });
+            } catch (PunishmentException e) {
+                plugin.getLogger().error("An error occurred while creating a ban for player " + player + " (" + uuid + ")", e);
+                Util.sendErrorMessage(context, e);
+            }
         });
         return Command.SINGLE_SUCCESS;
     }

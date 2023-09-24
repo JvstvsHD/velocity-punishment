@@ -26,6 +26,7 @@ package de.jvstvshd.velocitypunishment.impl;
 
 import com.velocitypowered.api.command.CommandSource;
 import com.velocitypowered.api.proxy.Player;
+import de.jvstvshd.velocitypunishment.api.PunishmentException;
 import de.jvstvshd.velocitypunishment.api.message.MessageProvider;
 import de.jvstvshd.velocitypunishment.api.punishment.Kick;
 import de.jvstvshd.velocitypunishment.api.punishment.Punishment;
@@ -47,7 +48,7 @@ public class DefaultKick extends AbstractPunishment implements Kick {
     }
 
     @Override
-    public CompletableFuture<Punishment> punish() {
+    public CompletableFuture<Punishment> punish() throws PunishmentException {
         Optional<Player> optPlayer = getPunishmentManager().getServer().getPlayer(getPlayerUuid());
         if (optPlayer.isEmpty())
             throw new IllegalArgumentException("Invalid player was not found. This could be because " +

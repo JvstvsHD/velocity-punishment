@@ -173,7 +173,8 @@ public class ResourceBundleMessageProvider implements MessageProvider {
         //temporary workaround for avoiding legacy color codes
         //TODO: replace with complete MiniMessage support
         Locale finalLocale = locale;
-        var resourceBundle = bundles.stream().filter(bundle -> Objects.equals(Translator.parseLocale(bundle.getString("locale")), finalLocale)).findFirst().orElseThrow(() -> new IllegalStateException("No bundle found for locale " + finalLocale));
+        var resourceBundle = bundles.stream().filter(bundle -> finalLocale.getISO3Language().equals(Objects.requireNonNullElse(Translator.parseLocale(bundle.getString("locale")), Locale.UK).getISO3Language()))
+                .findFirst().orElseThrow(() -> new IllegalStateException("No bundle found for locale " + finalLocale));
         return MiniMessage.miniMessage().deserialize(resourceBundle.getString(key));
         /*var rendered = GlobalTranslator.render(Component.translatable(key), locale);
         if (rendered instanceof TextComponent textComponent) {

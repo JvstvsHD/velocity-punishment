@@ -25,6 +25,7 @@
 package de.jvstvshd.velocitypunishment.impl;
 
 
+import de.chojo.sadu.base.QueryFactory;
 import de.jvstvshd.velocitypunishment.api.message.MessageProvider;
 import de.jvstvshd.velocitypunishment.api.punishment.Punishment;
 import de.jvstvshd.velocitypunishment.api.punishment.util.PlayerResolver;
@@ -37,7 +38,7 @@ import java.util.concurrent.Callable;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
 
-public abstract class AbstractPunishment implements Punishment {
+public abstract class AbstractPunishment extends QueryFactory implements Punishment {
 
     private final Component reason;
     private final DataSource dataSource;
@@ -50,7 +51,8 @@ public abstract class AbstractPunishment implements Punishment {
 
     protected final static String APPLY_PUNISHMENT = "INSERT INTO velocity_punishment" +
             " (uuid, name, type, expiration, reason, punishment_id) VALUES (?, ?, ?, ?, ?, ?)";
-    protected final static String APPLY_ANNUL = "DELETE FROM velocity_punishment WHERE punishment_id = ?";
+    protected final static String APPLY_CANCELLATION
+            = "DELETE FROM velocity_punishment WHERE punishment_id = ?";
     protected final static String APPLY_CHANGE = "UPDATE velocity_punishment SET reason = ?, expiration = ?, permanent = ? WHERE punishment_id = ?";
     private boolean validity;
 
@@ -59,6 +61,7 @@ public abstract class AbstractPunishment implements Punishment {
     }
 
     public AbstractPunishment(UUID playerUuid, Component reason, DataSource dataSource, ExecutorService service, DefaultPunishmentManager punishmentManager, UUID punishmentUuid, PlayerResolver playerResolver, MessageProvider messageProvider) {
+        super(dataSource);
         this.reason = reason;
         this.dataSource = dataSource;
         this.service = service;

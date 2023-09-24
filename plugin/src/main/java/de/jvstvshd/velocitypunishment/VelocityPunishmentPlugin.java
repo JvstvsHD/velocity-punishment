@@ -34,8 +34,11 @@ import com.velocitypowered.api.plugin.annotation.DataDirectory;
 import com.velocitypowered.api.proxy.ProxyServer;
 import com.velocitypowered.api.proxy.messages.ChannelIdentifier;
 import com.velocitypowered.api.proxy.messages.MinecraftChannelIdentifier;
-import com.zaxxer.hikari.HikariConfig;
 import com.zaxxer.hikari.HikariDataSource;
+import de.chojo.sadu.databases.PostgreSql;
+import de.chojo.sadu.datasource.DataSourceCreator;
+import de.chojo.sadu.updater.SqlUpdater;
+import de.chojo.sadu.wrapper.QueryBuilderConfig;
 import de.jvstvshd.velocitypunishment.api.VelocityPunishment;
 import de.jvstvshd.velocitypunishment.api.message.MessageProvider;
 import de.jvstvshd.velocitypunishment.api.punishment.PunishmentManager;
@@ -49,16 +52,12 @@ import de.jvstvshd.velocitypunishment.listener.ConnectListener;
 import de.jvstvshd.velocitypunishment.message.ResourceBundleMessageProvider;
 import net.kyori.adventure.text.Component;
 import org.jetbrains.annotations.NotNull;
-import org.postgresql.ds.PGSimpleDataSource;
 import org.slf4j.Logger;
 
 import java.io.IOException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.sql.Connection;
-import java.sql.PreparedStatement;
 import java.sql.SQLException;
-import java.util.Properties;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
@@ -100,6 +99,7 @@ public class VelocityPunishmentPlugin implements VelocityPunishment {
 
     @Subscribe
     public void onProxyInitialization(ProxyInitializeEvent event) {
+        Thread.setDefaultUncaughtExceptionHandler((t, e) -> logger.error("An error occurred in thread " + t.getName(), e));
         try {
             configurationManager.load();
             if (configurationManager.getConfiguration().isWhitelistActivated()) {
@@ -109,11 +109,13 @@ public class VelocityPunishmentPlugin implements VelocityPunishment {
         } catch (IOException e) {
             logger.error("Could not load configuration", e);
         }
+        QueryBuilderConfig.setDefault(QueryBuilderConfig.builder().withExceptionHandler(e -> logger.error("An error occurred during a database request", e)).build());
         dataSource = createDataSource();
         punishmentManager = new DefaultPunishmentManager(server, dataSource, this);
         try {
-            initDataSource();
-        } catch (SQLException e) {
+            updateDatabase();
+            //initDataSource();
+        } catch (SQLException | IOException e) {
             logger.error("Could not create table velocity_punishment in database " + dataSource.getDataSourceProperties().get("dataSource.databaseName"), e);
         }
         setup(server.getCommandManager(), server.getEventManager());
@@ -139,28 +141,26 @@ public class VelocityPunishmentPlugin implements VelocityPunishment {
 
     private HikariDataSource createDataSource() {
         var dbData = configurationManager.getConfiguration().getDataBaseData();
-        var properties = new Properties();
-        properties.setProperty("dataSource.databaseName", dbData.getDatabase());
-        properties.setProperty("dataSource.serverName", dbData.getHost());
-        properties.setProperty("dataSource.portNumber", dbData.getPort());
-        properties.setProperty("dataSourceClassName", PGSimpleDataSource.class.getName());
-        properties.setProperty("dataSource.user", dbData.getUsername());
-        properties.setProperty("dataSource.password", dbData.getPassword());
-        var config = new HikariConfig(properties);
-        config.setPoolName("velocity-punishment-hikari");
-        return new HikariDataSource(config);
+        //TODO add config option for sql type
+        return DataSourceCreator.create(PostgreSql.get())
+                .configure(jdbcConfig -> jdbcConfig.host(dbData.getHost())
+                        .port(dbData.getPort())
+                        .database(dbData.getDatabase())
+                        .user(dbData.getUsername())
+                        .password(dbData.getPassword())
+                        .applicationName("Velocity Punishment Plugin"))
+                .create().withMaximumPoolSize(dbData.getMaxPoolSize())
+                .withMinimumIdle(dbData.getMinIdle())
+                .withPoolName("velocity-punishment-hikari")
+                .build();
     }
 
-    private void initDataSource() throws SQLException {
-        try (Connection connection = dataSource.getConnection(); PreparedStatement statement =
-                connection.prepareStatement("CREATE TABLE IF NOT EXISTS velocity_punishment (uuid  VARCHAR (36), name VARCHAR (16), type VARCHAR (1000), expiration TIMESTAMP (6), " +
-                        "reason VARCHAR (1000), punishment_id VARCHAR (36))")) {
-            statement.execute();
-        }
-        try (Connection connection = dataSource.getConnection(); PreparedStatement statement =
-                connection.prepareStatement("CREATE TABLE IF NOT EXISTS velocity_punishment_whitelist (uuid VARCHAR (36))")) {
-            statement.execute();
-        }
+    private void updateDatabase() throws IOException, SQLException {
+        //TODO config option for sql type
+        SqlUpdater.builder(dataSource, PostgreSql.get())
+                .setSchemas("punishment")
+                .execute();
+
     }
 
     @Override

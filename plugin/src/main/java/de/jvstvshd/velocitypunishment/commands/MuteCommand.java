@@ -29,6 +29,7 @@ import com.mojang.brigadier.context.CommandContext;
 import com.velocitypowered.api.command.BrigadierCommand;
 import com.velocitypowered.api.command.CommandSource;
 import de.jvstvshd.velocitypunishment.VelocityPunishmentPlugin;
+import de.jvstvshd.velocitypunishment.api.PunishmentException;
 import de.jvstvshd.velocitypunishment.internal.PunishmentHelper;
 import de.jvstvshd.velocitypunishment.internal.Util;
 import net.kyori.adventure.text.TextComponent;
@@ -58,18 +59,23 @@ public class MuteCommand {
         playerResolver.getOrQueryPlayerUuid(player, plugin.getService()).whenCompleteAsync((uuid, throwable) -> {
             if (Util.sendErrorMessageIfErrorOccurred(context, uuid, throwable, plugin)) return;
             TextComponent reason = PunishmentHelper.parseReason(context);
-            punishmentManager.createPermanentMute(uuid, reason).punish().whenComplete((mute, t) -> {
-                if (t != null) {
-                    t.printStackTrace();
-                    source.sendMessage(plugin.getMessageProvider().internalError(source, true));
-                } else {
-                    String uuidString = uuid.toString().toLowerCase();
-                    source.sendMessage(plugin.getMessageProvider().provide("command.mute.success", source, true, copyComponent(player, plugin.getMessageProvider(), source).color(NamedTextColor.YELLOW).decorate(TextDecoration.BOLD),
-                            copyComponent(uuidString, plugin.getMessageProvider(), source).color(NamedTextColor.YELLOW).decorate(TextDecoration.BOLD),
-                            reason).color(NamedTextColor.GREEN));
-                    source.sendMessage(plugin.getMessageProvider().provide("commands.general.punishment.id", source, true, copyComponent(mute.getPunishmentUuid().toString().toLowerCase(), plugin.getMessageProvider(), source).color(NamedTextColor.YELLOW)));
-                }
-            });
+            try {
+                punishmentManager.createPermanentMute(uuid, reason).punish().whenComplete((mute, t) -> {
+                    if (t != null) {
+                        plugin.getLogger().error("An error occurred while creating a mute for player " + player + " (" + uuid + ")", t);
+                        source.sendMessage(plugin.getMessageProvider().internalError(source, true));
+                    } else {
+                        String uuidString = uuid.toString().toLowerCase();
+                        source.sendMessage(plugin.getMessageProvider().provide("command.mute.success", source, true, copyComponent(player, plugin.getMessageProvider(), source).color(NamedTextColor.YELLOW).decorate(TextDecoration.BOLD),
+                                copyComponent(uuidString, plugin.getMessageProvider(), source).color(NamedTextColor.YELLOW).decorate(TextDecoration.BOLD),
+                                reason).color(NamedTextColor.GREEN));
+                        source.sendMessage(plugin.getMessageProvider().provide("commands.general.punishment.id", source, true, copyComponent(mute.getPunishmentUuid().toString().toLowerCase(), plugin.getMessageProvider(), source).color(NamedTextColor.YELLOW)));
+                    }
+                });
+            } catch (PunishmentException e) {
+                plugin.getLogger().error("An error occurred while creating a mute for player " + player + " (" + uuid + ")", e);
+                Util.sendErrorMessage(context, e);
+            }
         }, plugin.getService());
         return Command.SINGLE_SUCCESS;
     }

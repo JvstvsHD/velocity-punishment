@@ -33,6 +33,7 @@ import com.mojang.brigadier.context.CommandContext;
 import com.velocitypowered.api.command.BrigadierCommand;
 import com.velocitypowered.api.command.CommandSource;
 import de.jvstvshd.velocitypunishment.VelocityPunishmentPlugin;
+import de.jvstvshd.velocitypunishment.api.PunishmentException;
 import de.jvstvshd.velocitypunishment.api.punishment.Punishment;
 import de.jvstvshd.velocitypunishment.internal.PunishmentHelper;
 import de.jvstvshd.velocitypunishment.internal.Util;
@@ -66,19 +67,11 @@ public class PunishmentCommand {
         CommandSource source = context.getSource();
         var punishmentManager = plugin.getPunishmentManager();
         PunishmentHelper.getPlayerUuid(context, plugin).whenCompleteAsync((uuid, throwable) -> {
-            if (throwable != null) {
-                source.sendMessage(plugin.getMessageProvider().internalError(source, true));
-                throwable.printStackTrace();
-                return;
-            }
-            if (uuid == null) {
-                source.sendMessage(plugin.getMessageProvider().provide("command.punishment.not-banned", source, true).color(NamedTextColor.RED));
-                return;
-            }
+            if (Util.sendErrorMessageIfErrorOccurred(context, uuid, throwable, plugin)) return;
             punishmentManager.getPunishments(uuid, plugin.getService()).whenComplete((punishments, t) -> {
                 if (t != null) {
                     source.sendMessage(plugin.getMessageProvider().internalError(source, true));
-                    t.printStackTrace();
+                    plugin.getLogger().error("An error occurred while getting punishments for player " + uuid, t);
                     return;
                 }
                 source.sendMessage(plugin.getMessageProvider().provide("command.punishment.punishments", source, true, Component.text(punishments.size())).color(NamedTextColor.AQUA));
@@ -111,7 +104,7 @@ public class PunishmentCommand {
         }
         plugin.getPunishmentManager().getPunishment(uuid, plugin.getService()).whenCompleteAsync((optional, throwable) -> {
             if (throwable != null) {
-                throwable.printStackTrace();
+                plugin.getLogger().error("An error occurred while getting punishment " + uuid, throwable);
                 source.sendMessage(plugin.getMessageProvider().internalError(source, true));
                 return;
             }
@@ -123,14 +116,21 @@ public class PunishmentCommand {
             }
             punishment = optional.get();
             switch (option) {
-                case "cancel", "remove" -> punishment.cancel().whenCompleteAsync((unused, t) -> {
-                    if (t != null) {
-                        t.printStackTrace();
-                        source.sendMessage(plugin.getMessageProvider().internalError(source, true));
-                        return;
+                case "cancel", "remove" -> {
+                    try {
+                        punishment.cancel().whenCompleteAsync((unused, t) -> {
+                            if (t != null) {
+                                plugin.getLogger().error("An error occurred while cancelling punishment " + uuid, t);
+                                source.sendMessage(plugin.getMessageProvider().internalError(source, true));
+                                return;
+                            }
+                            source.sendMessage(plugin.getMessageProvider().provide("punishment.remove", source, true).color(NamedTextColor.GREEN));
+                        });
+                    } catch (PunishmentException e) {
+                        plugin.getLogger().error("An error occurred while cancelling punishment " + uuid, e);
+                        Util.sendErrorMessage(context, e);
                     }
-                    source.sendMessage(plugin.getMessageProvider().provide("punishment.remove", source, true).color(NamedTextColor.GREEN));
-                });
+                }
                 case "info" ->
                         source.sendMessage(PunishmentHelper.buildPunishmentData(punishment, plugin.getMessageProvider(), source));
                 case "change" -> source.sendMessage(Component.text("Soon (TM)"));

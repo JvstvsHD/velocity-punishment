@@ -25,29 +25,24 @@
 package de.jvstvshd.velocitypunishment.impl;
 
 import com.velocitypowered.api.command.CommandSource;
+import de.jvstvshd.velocitypunishment.api.PunishmentException;
 import de.jvstvshd.velocitypunishment.api.duration.PunishmentDuration;
 import de.jvstvshd.velocitypunishment.api.message.MessageProvider;
 import de.jvstvshd.velocitypunishment.api.punishment.Mute;
 import de.jvstvshd.velocitypunishment.api.punishment.Punishment;
-import de.jvstvshd.velocitypunishment.api.punishment.PunishmentType;
 import de.jvstvshd.velocitypunishment.api.punishment.StandardPunishmentType;
 import de.jvstvshd.velocitypunishment.api.punishment.util.PlayerResolver;
 import de.jvstvshd.velocitypunishment.common.plugin.MuteData;
-import de.jvstvshd.velocitypunishment.internal.Util;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.format.TextDecoration;
 
 import javax.sql.DataSource;
-import java.sql.Connection;
-import java.sql.PreparedStatement;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.TimeUnit;
 
 public class DefaultMute extends AbstractTemporalPunishment implements Mute {
 
@@ -65,42 +60,21 @@ public class DefaultMute extends AbstractTemporalPunishment implements Mute {
     }
 
     @Override
-    public CompletableFuture<Punishment> punish() {
-        checkValidity();
-        getDuration().absolute();
-        return executeAsync(() -> {
-            try (Connection connection = getDataSource().getConnection();
-                 PreparedStatement statement = connection.prepareStatement(APPLY_PUNISHMENT)) {
-                statement.setString(1, Util.trimUuid(getPlayerUuid()));
-                statement.setString(2, getPlayerResolver().getOrQueryPlayerName(getPlayerUuid(),
-                        Executors.newSingleThreadExecutor()).get(5, TimeUnit.SECONDS).toLowerCase());
-                statement.setString(3, getType().getName());
-                statement.setTimestamp(4, getDuration().expirationAsTimestamp());
-                statement.setString(5, convertReason(getReason()));
-                statement.setString(6, Util.trimUuid(getPunishmentUuid()));
-                statement.executeUpdate();
-
-                queueMute(MuteData.ADD);
-                return this;
-            }
-        }, getService());
+    public CompletableFuture<Punishment> punish() throws PunishmentException {
+        var punishment = super.punish();
+        queueMute(MuteData.ADD);
+        return punishment;
     }
 
     @Override
-    public CompletableFuture<Punishment> cancel() {
-        return executeAsync(() -> {
-            try (Connection connection = getDataSource().getConnection();
-                 PreparedStatement statement = connection.prepareStatement(APPLY_ANNUL)) {
-                statement.setString(1, Util.trimUuid(getPunishmentUuid()));
-                statement.executeUpdate();
-                queueMute(MuteData.REMOVE);
-                return this;
-            }
-        }, getService());
+    public CompletableFuture<Punishment> cancel() throws PunishmentException {
+        var punishment = super.cancel();
+        queueMute(MuteData.REMOVE);
+        return punishment;
     }
 
     @Override
-    public PunishmentType getType() {
+    public StandardPunishmentType getType() {
         return isPermanent() ? StandardPunishmentType.PERMANENT_MUTE : StandardPunishmentType.MUTE;
     }
 
@@ -123,4 +97,13 @@ public class DefaultMute extends AbstractTemporalPunishment implements Mute {
             return getMessageProvider().provide("punishment.mute.temp.full-reason", source, true, Component.text(getDuration().remainingDuration()).color(NamedTextColor.YELLOW), getReason(), until);
         }
     }
+
+    void queueMute(int type) {
+        try {
+            getPunishmentManager().plugin().communicator().queueMute((Mute) this, type);
+        } catch (Exception e) {
+            getPunishmentManager().plugin().getLogger().error("Could not queue mute", e);
+        }
+    }
+
 }
