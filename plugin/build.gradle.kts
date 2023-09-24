@@ -1,6 +1,7 @@
 plugins {
     java
     id("com.github.johnrengelman.shadow") version "7.1.2"
+    id("xyz.jpenilla.run-velocity") version "2.1.0"
     `java-library`
 }
 
@@ -9,6 +10,7 @@ description = "A plugin handling all your needs for punishments on Velocity, bas
 
 repositories {
     mavenCentral()
+    maven("https://eldonexus.de/repository/maven-public")
 }
 
 dependencies {
@@ -29,6 +31,13 @@ tasks.getByName<Test>("test") {
 tasks {
     compileJava {
         options.encoding = "UTF-8"
+    }
+
+    runVelocity {
+        // Configure the Velocity version for our task.
+        // This is the only required configuration besides applying the plugin.
+        // Your plugin's jar (or shadowJar if present) will be used automatically.
+        velocityVersion("3.2.0-SNAPSHOT")
     }
 
     val copyServerJar = task<Copy>("copyServerJar") {

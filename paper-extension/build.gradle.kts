@@ -2,7 +2,7 @@ plugins {
     java
     `java-library`
     id("com.github.johnrengelman.shadow") version "7.1.2"
-    id("net.minecrell.plugin-yml.bukkit") version "0.5.2"
+    id("net.minecrell.plugin-yml.bukkit") version "0.5.3"
 }
 
 group = "de.jvstvshd.velocitypunishment"

@@ -1,12 +1,14 @@
 rootProject.name = "velocity-punishment"
 include("api")
 include("plugin")
+include("paper-extension")
+include("plugin-common")
+
 enableFeaturePreview("TYPESAFE_PROJECT_ACCESSORS")
 dependencyResolutionManagement {
-    @Suppress("UnstableApiUsage")
     versionCatalogs {
         create("libs") {
-            library("velocity-api", "com.velocitypowered", "velocity-api").version("3.1.2-SNAPSHOT")
+            library("velocity-api", "com.velocitypowered", "velocity-api").version("3.2.0-SNAPSHOT")
             library("luckperms-api", "net.luckperms", "api").version("5.4")
             library("jackson-databind", "com.fasterxml.jackson.core", "jackson-databind").version("2.13.4")
             library(
@@ -18,7 +20,8 @@ dependencyResolutionManagement {
 
             library("postgresql", "org.postgresql", "postgresql").version("42.5.0")
             library("hikari", "com.zaxxer", "HikariCP").version("5.0.1")
-            bundle("database", listOf("postgresql", "hikari"))
+            library("sadu", "de.chojo.sadu", "sadu").version("1.2.0")
+            bundle("database", listOf("postgresql", "hikari", "sadu"))
 
             val jUnitVersion = version("junit", "5.9.1")
             library("junit-jupiter-api", "org.junit.jupiter", "junit-jupiter-api").versionRef(jUnitVersion)
@@ -29,5 +32,3 @@ dependencyResolutionManagement {
         }
     }
 }
-include("paper-extension")
-include("plugin-common")
